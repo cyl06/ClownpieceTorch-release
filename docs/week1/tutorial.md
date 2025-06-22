@@ -239,6 +239,11 @@ Let $\text{shape}_A = (2, 2)$, $\text{shape}_B = (3, 2)$, then $A, B$ are not br
 
 Let $A=(1, 2), B=\begin{pmatrix}3 & 4 \\ 5 & 6\end{pmatrix}$. For $A+B$, we broadcast $A$ to $\begin{pmatrix}1 & 2 \\ 1 & 2\end{pmatrix}$, then $A+B=\begin{pmatrix}4 & 6 \\ 6 & 8\end{pmatrix}$
 
+---
+## 📘 Additional Tutorials
+* [**Intorduction To Tensor (PyTorch doc)**](https://docs.pytorch.org/tutorials/beginner/introyt/tensors_deeper_tutorial.html):  An beginner guide that thoroughly explores the usage of torch.Tensor class. Have a look if you are unfamiliar with tensor in PyTorch.
+
+* [**PyTorch internals (Blog by ezyang)**](https://blog.ezyang.com/2019/05/pytorch-internals): A detailed deep‑dive and conceptual tour of PyTorch’s core tensor abstraction—including metadata like layout, device, dtype, and stride—and how these underpin view creation, slicing, and the broader C++ kernel and autograd layers .
 
 ---
 
