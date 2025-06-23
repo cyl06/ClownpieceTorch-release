@@ -281,4 +281,10 @@ namespace at {
 
   Tensor linspace(dtype start, dtype end, int num_steps) {}
   
+  /*
+    Week3 adds-on
+  */
+  Tensor Tensor::mean(int dim, bool keepdims) const {}
+
+  Tensor Tensor::var(int dim, bool keepdims, bool unbiased) const {}
 };

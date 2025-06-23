@@ -333,6 +333,10 @@ PYBIND11_MODULE(tensor_impl, m) {
             return at::randn_like(self);
         }, "Create a tensor with random values from a normal distribution with the same shape and type as another tensor")
 
+        /* week 3 adds on*/
+
+        .def("mean", &at::Tensor::mean, py::arg("dim"), py::arg("keepdims") = false, "Calculate the mean along a dimension")
+        .def("var", &at::Tensor::var, py::arg("dim"), py::arg("keepdims") = false, py::arg("unbiased") = true, "Calculate the variance along a dimension")
         ;
 
     /*** Part II: utils, clone, make contiguous and copy_ ***/
@@ -470,6 +474,7 @@ PYBIND11_MODULE(tensor_impl, m) {
     m.def("broadcast_tensors", [](const std::vector<at::Tensor> &tensors) {
         return at::Tensor().broadcast(tensors);
     }, py::arg("tensors"), "Broadcast a list of tensors to a common shape");
+    
 
     /*** Part VIII: Other Helper Constuctors: ***/
     m.def("to_singleton_tensor", [](const at::dtype &value, int dim) {

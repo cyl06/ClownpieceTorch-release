@@ -231,6 +231,11 @@ class Tensor {
   static vec<Tensor> broadcast(const vec<Tensor>& tensors);
 
 
+  /*
+    Week3 add-ons
+  */
+  Tensor mean(int dim, bool keepdims=false) const;
+  Tensor var(int dim, bool keepdims=false, bool unbiased=true) const;
 };
 
 

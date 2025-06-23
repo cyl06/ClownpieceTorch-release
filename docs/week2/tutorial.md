@@ -186,15 +186,13 @@ Keep in mind that some terminology in these resources may differ from ours — f
 ```bash
 clownpiece
 |--tensor
-| |- __init__.py
-| |- tensor.py # TensorBase (w.o. grad tracing) and Tensor (w. grad tracing)
-| |- ...
 |--autograd
 | |- autograd.py # Key Autograd Engine Component
 | |- __init__.py
 | |- function.py # Implement Functions
 | |- no_grad.py  # Manage no_grad Context
 |- __init__.py
+|- tensor.py # TensorBase (w.o. grad tracing) and Tensor (w. grad tracing)
 |...
 ```
 
@@ -1053,6 +1051,20 @@ Please complete:
 > `Tensor.broadcast_to(self, shape)` & `class BroadcastTo(Function)`
 
 > `broadcast(tensors)` & `class Broadcast(Function)`
+
+---
+
+### Part UNKOWN
+
+Due to the same reason as week1, please complete:
+
+> `Tensor.mean(self, dim, keepdims=False)` & `class Mean(Function)`
+
+> `Tensor.var(self, dim, keepdims=False, unbiased=True)` & `class Var(Function)`
+
+Think carefully for backward of Var.
+
+Tests are included in part5 (initially commented out).
 
 ---
 

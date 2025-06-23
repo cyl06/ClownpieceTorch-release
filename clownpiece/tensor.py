@@ -440,6 +440,18 @@ class TensorBase:
       raise TypeError(f"Expected int for dim, got {type(dim).__name__}")
     split_impls = cp.split(self._impl, split, dim)
     return [self.__class__(impl) for impl in split_impls]  
+
+  def mean(self, dim: int, keepdims: bool = False):
+    if not isinstance(dim, int):
+      raise TypeError(f"Expected int for dim, got {type(dim).__name__}")
+    mean_impl = self._impl.mean(dim, keepdims)
+    return self.__class__(mean_impl)
+  
+  def var(self, dim: int, keepdims: bool = False, unbiased: bool = True):
+    if not isinstance(dim, int):
+      raise TypeError(f"Expected int for dim, got {type(dim).__name__}")
+    var_impl = self._impl.var(dim, keepdims, unbiased)
+    return self.__class__(var_impl)
   
 
 """
@@ -738,6 +750,16 @@ class Tensor(TensorBase):
   # def broadcast(inputs: List["Tensor"], FunctionClass=None) -> "Tensor":
   #     return FunctionClass().apply(*inputs)
   
+  
+    
+  # @tensor_op('mean', 'Mean')
+  # def mean(self, dim: int, keepdims: bool = False, FunctionClass=None) -> "Tensor":
+  #     return FunctionClass().apply(self, dim, keepdims)
+    
+  # @tensor_op('var', 'Var')
+  # def var(self, dim: int, keepdims: bool = False, unbiased: bool = True, FunctionClass=None) -> "Tensor":
+  #     return FunctionClass().apply(self, dim, keepdims, unbiased)
+      
   """
   STR
   """

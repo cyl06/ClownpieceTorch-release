@@ -74,6 +74,48 @@ def softmax2(impl=torch):
                      [[31., 32., -33., 34., 35.], [36., 37., 38., 39., -40.]]])
     return a.softmax(dim = 1)
 
+@testcase(name="mean: mean for 1D tensor", score=0)
+
+def mean1(impl=torch):
+    a = impl.Tensor([1., 2., 3., 4., 5.])
+    return a.mean(dim=0)
+
+@testcase(name="mean: mean for 2D tensor", score=0)
+
+def mean2(impl=torch):
+    a = impl.Tensor([[1., 2., 3.], [4., 5., 6.]])
+    return a.mean(dim=0), a.mean(dim=1)
+
+@testcase(name="mean: mean with keepdims", score=0)
+
+def mean3(impl=torch):
+    a = impl.Tensor([[1., 2., 3.], [4., 5., 6.]])
+    return a.mean(dim=0, keepdims=True), a.mean(dim=1, keepdims=True)
+
+@testcase(name="var: variance for 1D tensor", score=0)
+
+def var1(impl=torch):
+    a = impl.Tensor([1., 2., 3., 4., 5.])
+    return a.var(dim=0, unbiased=False)
+
+@testcase(name="var: variance for 2D tensor", score=0)
+
+def var2(impl=torch):
+    a = impl.Tensor([[1., 2., 3.], [5., 5., 6.]])
+    return a.var(dim=0, unbiased=False), a.var(dim=1, unbiased=False)
+
+@testcase(name="var: variance with keepdims", score=0)
+
+def var3(impl=torch):
+    a = impl.Tensor([[1., 2., 3.], [5., 5., 6.]])
+    return a.var(dim=0, keepdims=True, unbiased=False), a.var(dim=1, keepdims=True, unbiased=False)
+
+@testcase(name="var: variance unbiased", score=0)
+
+def var4(impl=torch):
+    a = impl.Tensor([[1., 2., 3.], [5., 5., 6.]])
+    return a.var(dim=0, unbiased=True), a.var(dim=1, unbiased=True)
+
 def testsets_part6():
     sum1()
     sum2()
@@ -85,6 +127,14 @@ def testsets_part6():
     max4()
     softmax1()
     softmax2()
+    
+    # mean1()
+    # mean2()
+    # mean3()
+    # var1()
+    # var2()
+    # var3()
+    # var4()
 
 if __name__ == "__main__":
     print("Beginning grading part6")

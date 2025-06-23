@@ -66,6 +66,32 @@ def softmax_op(impl=torch):
     
     return a.grad, b, c.grad, d
 
+@testcase(name="mean", score=0)
+def mean_op(impl=torch):
+    a = impl.Tensor(test_data_basic)
+    a.requires_grad_()
+    
+    b = a.mean(dim=1, keepdims=True)
+    b.backward(impl.ones_like(b))
+    
+    c = a.mean(dim=0, keepdims=False)
+    c.backward(impl.ones_like(c))
+    
+    return a.grad, b, c
+
+@testcase(name="var", score=0)
+def var_op(impl=torch):
+    a = impl.Tensor(test_data_basic)
+    a.requires_grad_()
+    
+    b = a.var(dim=1, keepdims=True, unbiased=False)
+    b.backward(impl.ones_like(b))
+    
+    c = a.var(dim=0, keepdims=False, unbiased=True)
+    c.backward(impl.ones_like(c))
+    
+    return a.grad, b, c
+
 def testsets_part5():
     print_separate_line()
     print("Testing Part5 Max, Sum, Softmax...")
@@ -73,6 +99,8 @@ def testsets_part5():
     sum_op()
     sum_op_hard()
     softmax_op()
+    # mean_op()
+    # var_op()
 
 if __name__ == "__main__":
     testsets_part5()
