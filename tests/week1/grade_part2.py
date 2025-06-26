@@ -56,8 +56,9 @@ def clone2(impl = torch):
 def copyfrom1(impl = torch):
   lst = [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]]
   a = impl.Tensor(lst)
+  print("A = ", a)
   b = impl.zeros((2, 5))
-  
+  print("B = ", b)
   b.copy_(a)
   return b
 

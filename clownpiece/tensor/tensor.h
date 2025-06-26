@@ -58,14 +58,23 @@ class Tensor {
 
  protected:
   shape_t shape_;
+ 
+ private:
+  veci shape_prod_;
+
+ protected:
   stride_t stride_;
-  int offset_;
+  int offset_ = 0;
   Storage storage_;
 
  private:
   /*
     other helper member variables/functions
   */
+  int numel_; // total number of elements
+  int dim_;
+  bool is_contiguous_;
+  
   friend int print_tensor_data_recursive(std::ostream& os, const Tensor& tensor, int dim_index, int flat_data_index, std::string prefix);
 
  public:
@@ -73,6 +82,9 @@ class Tensor {
     constructors and assignments
   */
   dtype& data_at(int index) const;
+  veci calc_prod();
+  int init_set();
+  int init_copy();
   Tensor();
   Tensor(dtype value);
   explicit Tensor(const shape_t& shape);
