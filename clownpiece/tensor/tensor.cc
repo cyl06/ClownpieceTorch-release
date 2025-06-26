@@ -591,14 +591,7 @@ namespace at {
   }
 
   std::pair<Tensor, Tensor> Tensor::broadcast(const Tensor& lhs, const Tensor& rhs) {
-    std::cerr << "############ Broadcast follow" << std::endl << lhs << std::endl << rhs << std::endl;
-    std::cerr << "############" << std::endl;
     shape_t new_shape(broadcast_shape(lhs.shape_, rhs.shape_));
-    std::cerr << "$$$$(";
-    for (int i = 0; i < new_shape.size(); i++) {
-      std::cerr << new_shape[i] << ", ";
-    }
-    std::cerr << ")" << std::endl;
     Tensor LHS(lhs.broadcast_to(new_shape));
     Tensor RHS(rhs.broadcast_to(new_shape));
     return std::make_pair(LHS, RHS);
