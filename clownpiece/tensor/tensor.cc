@@ -118,16 +118,22 @@ namespace at {
   /*
     constructors and assignments
   */
+  // zero dim tensor with no data
   Tensor::Tensor() : shape_(shape_t()), shape_prod_(calc_prod()), stride_(stride_t()), offset_(0), storage_(Storage()) { init_set(); }
   
+  // zero dim tensor with a scalar data
   Tensor::Tensor(dtype value) : shape_(shape_t()), shape_prod_(calc_prod()), stride_(stride_t()), offset_(0), storage_(Storage(numel_, value)) { init_set(); }
   
+  // tensor with given shape, with data uninitialized
   Tensor::Tensor(const shape_t& shape) : shape_(shape), shape_prod_(calc_prod()), stride_(stride_t(shape.size())), offset_(0), storage_(Storage(numel_)) { init_set(); }
   
+  // tensor with given shape, with data initialized to given value
   Tensor::Tensor(const shape_t& shape, dtype value) : shape_(shape), shape_prod_(calc_prod()), stride_(stride_t(shape.size())), offset_(0), storage_(Storage(numel_, value)) { init_set(); }
   
+  // tensor with given shape, with data initialized by a generator function
   Tensor::Tensor(const shape_t& shape, std::function<dtype()> generator) : shape_(shape), shape_prod_(calc_prod()), stride_(stride_t(shape.size())), offset_(0), storage_(Storage(numel_, generator)) { init_set(); }
   
+  // tensor with given shape, with a vector as underlying data
   Tensor::Tensor(const shape_t& shape, const vec<dtype>& data) : shape_(shape), shape_prod_(calc_prod()), stride_(stride_t(shape.size())), offset_(0), storage_(Storage(data)) {
     if (numel_ != data.size()) {
       throw std::runtime_error("invalid construct (Tensor set)");
@@ -135,10 +141,13 @@ namespace at {
     init_set();
   }
   
+  // tensor constructed from metadata + storage
   Tensor::Tensor(const shape_t& shape, const stride_t& stride, int offset, Storage storage) : shape_(shape), shape_prod_(calc_prod()), stride_(stride), offset_(offset), storage_(storage) { init_copy(); }
 
+  // shallow copy a tensor
   Tensor::Tensor(const Tensor& other) : Tensor(other.shape_, other.stride_, other.offset_, other.storage_) { }
 
+  // shallow copy a tensor
   Tensor& Tensor::operator=(const Tensor& other) {
     if (this == &other) {
       return *this;
@@ -154,6 +163,7 @@ namespace at {
     return *this;
   }
 
+  // only valid for singleton tensor
   Tensor& Tensor::operator=(dtype value) {
     if (numel_ != 1) {
       throw std::runtime_error("not singleton (Func Tensor::operator=)");
@@ -357,71 +367,145 @@ namespace at {
   /*
     operators
   */
-  Tensor Tensor::operator-() const {}
-
-  Tensor operator+(const Tensor& lhs, const Tensor& rhs) {}
+  // General functions
+  Tensor apply_unary_op(const Tensor& tes, std::function<dtype(dtype)> op) {
+    vec<dtype> data(tes.numel());
+    for (int i = 0; i < tes.numel(); i++) {
+      data[i] = op(tes.data_at(i));
+    }
+    return Tensor(tes.get_shape(), data);
+  }
   
-  Tensor operator-(const Tensor& lhs, const Tensor& rhs) {}
-
-  Tensor operator*(const Tensor& lhs, const Tensor& rhs) {}
-
-  Tensor operator/(const Tensor& lhs, const Tensor& rhs) {}
+  Tensor apply_binary_op(const Tensor& lhs, const Tensor& rhs, std::function<dtype(dtype, dtype)> op) {
+    auto [LHS, RHS] = Tensor::broadcast(lhs, rhs);
+    vec<dtype> data(LHS.numel());
+    for (int i = 0; i < LHS.numel(); i++) {
+      data[i] = op(LHS.data_at(i), RHS.data_at(i));
+    }
+    return Tensor(LHS.get_shape(), data);
+  }
   
-  Tensor operator==(const Tensor& lhs, const Tensor& rhs) {}
-
-  Tensor operator!=(const Tensor& lhs, const Tensor& rhs) {}
+  // Unary negation
+  Tensor Tensor::operator-() const {
+    return apply_unary_op(*this, [](dtype a) -> dtype { return -a; });
+  }
   
-  Tensor operator<(const Tensor& lhs, const Tensor& rhs) {}
+  // Element-wise addition
+  Tensor operator+(const Tensor& lhs, const Tensor& rhs) {
+    return apply_binary_op(lhs, rhs, [](dtype a, dtype b) -> dtype { return a + b; });
+  }
+  
+  // Element-wise subtraction
+  Tensor operator-(const Tensor& lhs, const Tensor& rhs) {
+    return apply_binary_op(lhs, rhs, [](dtype a, dtype b) -> dtype { return a - b; });
+  }
+  
+  // Element-wise multiplication
+  Tensor operator*(const Tensor& lhs, const Tensor& rhs) {
+    return apply_binary_op(lhs, rhs, [](dtype a, dtype b) -> dtype { return a * b; });
+  }
+  
+  // Element-wise division
+  Tensor operator/(const Tensor& lhs, const Tensor& rhs) {
+    return apply_binary_op(lhs, rhs, [](dtype a, dtype b) -> dtype { return a / b; });
+  }
+  
+  // Comparison
+  Tensor operator==(const Tensor& lhs, const Tensor& rhs) {
+    return apply_binary_op(lhs, rhs, [](dtype a, dtype b) -> dtype { return a == b; });
+  }
 
-  Tensor operator<=(const Tensor& lhs, const Tensor& rhs) {}
+  Tensor operator!=(const Tensor& lhs, const Tensor& rhs) {
+    return apply_binary_op(lhs, rhs, [](dtype a, dtype b) -> dtype { return a != b; });
+  }
+  
+  Tensor operator<(const Tensor& lhs, const Tensor& rhs) {
+    return apply_binary_op(lhs, rhs, [](dtype a, dtype b) -> dtype { return a < b; });
+  }
 
-  Tensor operator>=(const Tensor& lhs, const Tensor& rhs) {}
+  Tensor operator<=(const Tensor& lhs, const Tensor& rhs) {
+    return apply_binary_op(lhs, rhs, [](dtype a, dtype b) -> dtype { return a <= b; });
+  }
 
-  Tensor operator>(const Tensor& lhs, const Tensor& rhs) {}
+  Tensor operator>=(const Tensor& lhs, const Tensor& rhs) {
+    return apply_binary_op(lhs, rhs, [](dtype a, dtype b) -> dtype { return a >= b; });
+  }
+
+  Tensor operator>(const Tensor& lhs, const Tensor& rhs) {
+    return apply_binary_op(lhs, rhs, [](dtype a, dtype b) -> dtype { return a > b; });
+  }
 
   /*
     matrix multiplication
   */
-  Tensor matmul(const Tensor& lhs, const Tensor& rhs) {}
+  Tensor matmul(const Tensor& lhs, const Tensor& rhs) {
+    // wait for shape
+  }
 
   Tensor operator^(const Tensor& lhs, const Tensor& rhs) {
+    // wait for shape
   }
 
   /*
     other mathematical operations
   */
-  Tensor Tensor::sign() const {}
+  Tensor Tensor::sign() const {
+    return apply_unary_op(*this, [](dtype a) -> dtype {
+      if (a > 0) return 1.0;
+      if (a < 0) return -1.0;
+      return 0.0;
+    });
+  }
 
-  Tensor Tensor::abs() const {}
-  Tensor abs(const Tensor& tensor) {}
+  Tensor Tensor::abs() const {
+    return apply_unary_op(*this, [](dtype a) -> dtype { return std::abs(a); });
+  }
+  Tensor abs(const Tensor& tensor) { return tensor.abs(); }
 
-  Tensor Tensor::sin() const {}
-  Tensor sin(const Tensor& tensor) {}
+  Tensor Tensor::sin() const {
+    return apply_unary_op(*this, [](dtype a) -> dtype { return std::sin(a); });
+  }
+  Tensor sin(const Tensor& tensor) { return tensor.sin(); }
 
-  Tensor Tensor::cos() const {}
-  Tensor cos(const Tensor& tensor) {}
-  Tensor Tensor::tanh() const {}
-  Tensor tanh(const Tensor& tensor) {}
+  Tensor Tensor::cos() const {
+    return apply_unary_op(*this, [](dtype a) -> dtype { return std::cos(a); });
+  }
+  Tensor cos(const Tensor& tensor) { return tensor.cos(); }
+  
+  Tensor Tensor::tanh() const {
+    return apply_unary_op(*this, [](dtype a) -> dtype { return std::tanh(a); });
+  }
+  Tensor tanh(const Tensor& tensor) { return tensor.tanh(); }
 
-  Tensor Tensor::clamp(dtype min, dtype max) const {}
+  Tensor Tensor::clamp(dtype min, dtype max) const {
+    return apply_unary_op(*this, [min, max](dtype a) -> dtype { return std::min(max, std::max(min, a)); });
+  }
 
-  Tensor clamp(const Tensor& tensor, dtype min, dtype max) {}
+  Tensor clamp(const Tensor& tensor, dtype min, dtype max) { return tensor.clamp(min, max); }
 
-  Tensor Tensor::log() const {}
+  Tensor Tensor::log() const {
+    return apply_unary_op(*this, [](dtype a) -> dtype { return std::log(a); });
+  }
 
-  Tensor log(const Tensor& tensor) {}
+  Tensor log(const Tensor& tensor) { return tensor.log(); }
 
-  Tensor Tensor::exp() const {}
+  Tensor Tensor::exp() const {
+    return apply_unary_op(*this, [](dtype a) -> dtype { return std::exp(a); });
+  }
 
-  Tensor exp(const Tensor& tensor) {}
+  Tensor exp(const Tensor& tensor) { return tensor.exp(); }
 
-  Tensor Tensor::pow(dtype exponent) const {}
+  Tensor Tensor::pow(dtype exponent) const {
+    return apply_unary_op(*this, [exponent](dtype a) -> dtype { return std::pow(a, exponent); });
+  }
 
-  Tensor pow(const Tensor& tensor, dtype exponent) {}
+  Tensor pow(const Tensor& tensor, dtype exponent) { return tensor.pow(exponent); }
 
-  Tensor Tensor::sqrt() const {}
+  Tensor Tensor::sqrt() const {
+    return apply_unary_op(*this, [](dtype a) -> dtype { return std::sqrt(a); });
+  }
 
-  Tensor sqrt(const Tensor& tensor) {}
+  Tensor sqrt(const Tensor& tensor) { return tensor.sqrt(); }
 
   Tensor Tensor::sum(int dim, bool keepdims) const {}
 
@@ -469,10 +553,56 @@ namespace at {
   Tensor Tensor::squeeze(int dim) const {}
 
   Tensor Tensor::unsqueeze(int dim) const {}
+  
+  // check & calculate broadcast shape
+  shape_t broadcast_shape(const shape_t& a, const shape_t &b) {
+    int dim_ = std::max(a.size(), b.size());
+    shape_t shape_(dim_);
+    for (int i = 0, asiz, bsiz; i < dim_; i++) {
+      if (i >= a.size()) asiz = 1;
+      else asiz = a[a.size() - i - 1];
+      if (i >= b.size()) bsiz = 1;
+      else bsiz = b[b.size() - i - 1];
+      
+      if (asiz != bsiz && asiz != 1 && bsiz != 1) {
+        throw std::runtime_error("not broadcastable (Func broadcast_shape");
+      }
+      shape_[dim_ - i - 1] = std::max(asiz, bsiz);
+    }
+    return shape_;
+  }
+    
+  Tensor Tensor::broadcast_to(const shape_t& shape) const {
+    int to_dim = shape.size();
+    if (to_dim < dim_) {
+      throw std::runtime_error("invalid broadcast shape (Func Tensor::broadcast_to)");
+    }
+    
+    stride_t to_stride(to_dim, 0);
+    for (int i = 0; i < dim_; i++) {
+      if (shape[dim_ - i - 1] == 0 || shape_[dim_ - i - 1] > 1 && shape_[dim_ - i - 1] != shape[to_dim - i - 1]) {
+        throw std::runtime_error("invalid broadcast shape (Func Tensor::broadcast_to)");
+      }
+      if (shape_[dim_ - i - 1] == 1 && shape[to_dim - i - 1] == 1 || shape_[dim_ - i - 1] > 1) {
+        to_stride[to_dim - i - 1] = stride_[stride_.size() - i - 1];
+      }
+    }
+    return Tensor(shape, to_stride, offset_, storage_);
+  }
 
-  Tensor Tensor::broadcast_to(const shape_t& shape) const {}
-
-  std::pair<Tensor, Tensor> Tensor::broadcast(const Tensor& lhs, const Tensor& rhs) {}
+  std::pair<Tensor, Tensor> Tensor::broadcast(const Tensor& lhs, const Tensor& rhs) {
+    std::cerr << "############ Broadcast follow" << std::endl << lhs << std::endl << rhs << std::endl;
+    std::cerr << "############" << std::endl;
+    shape_t new_shape(broadcast_shape(lhs.shape_, rhs.shape_));
+    std::cerr << "$$$$(";
+    for (int i = 0; i < new_shape.size(); i++) {
+      std::cerr << new_shape[i] << ", ";
+    }
+    std::cerr << ")" << std::endl;
+    Tensor LHS(lhs.broadcast_to(new_shape));
+    Tensor RHS(rhs.broadcast_to(new_shape));
+    return std::make_pair(LHS, RHS);
+  }
   vec<Tensor> Tensor::broadcast(const vec<Tensor>& tensors) {}
 
 
