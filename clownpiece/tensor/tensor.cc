@@ -141,6 +141,9 @@ namespace at {
     init_set();
   }
   
+  // tensor just change the view
+  Tensor::Tensor(const shape_t& shape, int offset, Storage storage) : shape_(shape), shape_prod_(calc_prod()), stride_(stride_t(shape.size())), offset_(offset), storage_(storage) { init_set(); }
+  
   // tensor constructed from metadata + storage
   Tensor::Tensor(const shape_t& shape, const stride_t& stride, int offset, Storage storage) : shape_(shape), shape_prod_(calc_prod()), stride_(stride), offset_(offset), storage_(storage) { init_copy(); }
 
@@ -441,10 +444,9 @@ namespace at {
   Tensor matmul(const Tensor& lhs, const Tensor& rhs) {
     // wait for shape
   }
-
-  Tensor operator^(const Tensor& lhs, const Tensor& rhs) {
-    // wait for shape
-  }
+  
+  // Equivalent to matmul
+  Tensor operator^(const Tensor& lhs, const Tensor& rhs) { return matmul(lhs, rhs); }
 
   /*
     other mathematical operations
@@ -507,52 +509,216 @@ namespace at {
 
   Tensor sqrt(const Tensor& tensor) { return tensor.sqrt(); }
 
-  Tensor Tensor::sum(int dim, bool keepdims) const {}
+  Tensor Tensor::sum(int dim, bool keepdims) const {
+    
+  }
 
-  Tensor sum(const Tensor& tensor, int dim, bool keepdims) {}
+  Tensor sum(const Tensor& tensor, int dim, bool keepdims) { return tensor.sum(dim, keepdims); }
 
-  std::pair<Tensor, Tensor> Tensor::max(int dim, bool keepdims) const {}
+  std::pair<Tensor, Tensor> Tensor::max(int dim, bool keepdims) const {
+    
+  }
 
-  std::pair<Tensor, Tensor> max(const Tensor& tensor, int dim, bool keepdims) {}
+  std::pair<Tensor, Tensor> max(const Tensor& tensor, int dim, bool keepdims) { return tensor.max(dim, keepdims); }
 
-  Tensor Tensor::softmax(int dim) const {}
-  Tensor softmax(const Tensor& tensor, int dim) {}
+  Tensor Tensor::softmax(int dim) const {
+    
+  }
+  Tensor softmax(const Tensor& tensor, int dim) { return tensor.softmax(dim); }
 
   /*
     helper constructor
   */
 
-  Tensor Tensor::ones_like() const {}
-  Tensor Tensor::zeros_like() const {}
-  Tensor Tensor::randn_like() const {}
-  Tensor Tensor::empty_like() const {}
+  Tensor Tensor::ones_like() const { return ones(shape_); }
+  Tensor Tensor::zeros_like() const { return zeros(shape_); }
+  Tensor Tensor::randn_like() const { return randn(shape_); }
+  Tensor Tensor::empty_like() const { return empty(shape_); }
 
   /*
     shape manipulation
   */
+ 
+  shape_t deduce_shape(const shape_t& a, const int& numel_) {
+    int prod = 1, cnt = 0, pos = -1;
+    for (int i = 0; i < a.size(); i++) {
+      if (a[i] == -1) {
+        cnt++, pos = i;
+      } else {
+        prod *= a[i];
+      }
+    }
+    if (cnt > 1 || cnt == 0 && prod != numel_ || cnt == 1 && (prod == 0 || numel_ % prod)) {
+      throw std::runtime_error("invalid purposed shape (Func: deduce_shape)");
+    }
+    
+    shape_t d_shape(a);
+    if (cnt == 1) {
+      d_shape[pos] = numel_ / prod;
+    }
+    return d_shape;
+  }
 
-  Tensor Tensor::permute(veci p) const {}
+  Tensor Tensor::permute(veci p) const {
+    if (p.size() > dim_) {
+      throw std::runtime_error("invalid size of p (Func Tensor::permute)");
+    }
+    for (int i = 0; i < p.size(); i++) {
+      p[i] = pyindex(p[i], dim_);
+    }
+    
+    veci sort_p(p);
+    std::sort(sort_p.begin(), sort_p.end());
+    
+    for (int i = 1; i < p.size(); i++) {
+      if (sort_p[i] == sort_p[i - 1]) {
+        throw std::runtime_error("repeated elements of p (Func Tensor::permute)");
+      }
+    }
+    
+    shape_t p_shape(shape_);
+    stride_t p_stride(stride_);
+    for (int i = 0; i < p.size(); i++) {
+      p_shape[sort_p[i]] = shape_[p[i]];
+      p_stride[sort_p[i]] = stride_[p[i]];
+    }
+    
+    return Tensor(p_shape, p_stride, offset_, storage_);
+  }
 
-  Tensor Tensor::transpose(int dim1, int dim2) const {}
+  Tensor Tensor::transpose(int dim1, int dim2) const {
+    dim1 = pyindex(dim1, dim_);
+    dim2 = pyindex(dim2, dim_);
+    if (dim1 == dim2) {
+      return *this;
+    }
+    
+    shape_t t_shape(shape_);
+    stride_t t_stride(stride_);
+    
+    std::swap(t_shape[dim1], t_shape[dim2]);
+    std::swap(t_stride[dim1], t_stride[dim2]);
+    
+    return Tensor(t_shape, t_stride,offset_, storage_);
+  }
 
-  Tensor Tensor::reshape(const shape_t& purposed_shape, bool copy) const {}
+  Tensor Tensor::reshape(const shape_t& purposed_shape, bool copy) const {
+    if (!is_contiguous_ || copy) {
+      return clone().view(purposed_shape);
+    }
+    return view(purposed_shape);
+  }
 
-  Tensor Tensor::view(const shape_t& purposed_shape) const {}
+  Tensor Tensor::view(const shape_t& purposed_shape) const {
+    if (!is_contiguous_) {
+      throw std::runtime_error("viewing discontiguous tensor (Func Tensor::view)");
+    }
+    
+    shape_t dd_shape(deduce_shape(purposed_shape, numel_));
+    
+    return Tensor(dd_shape, offset_, storage_);
+  }
 
-  Tensor Tensor::narrow(int dim, int start, int length, bool copy) const {}
+  Tensor Tensor::narrow(int dim, int start, int length, bool copy) const {
+    dim = pyindex(dim, dim_);
+    start = pyindex(start, shape_[dim]);
+    
+    if (start + length > shape_[dim]) {
+      throw std::runtime_error("invalid length (Func: Tensor::narrow)");
+    }
+    
+    shape_t nr_shape(shape_);
+    nr_shape[dim] = length;
+    int nr_offset = offset_ + start * stride_[dim];
+    
+    Tensor nr_tensor(nr_shape, stride_, nr_offset, storage_);
+    
+    return copy ? nr_tensor.clone() : nr_tensor;
+  }
 
-  vec<Tensor> Tensor::chunk(int chunks, int dim) const {}
+  vec<Tensor> Tensor::chunk(int chunks, int dim) const {
+    if (chunks <= 0) {
+      throw std::runtime_error("invalid number of chunks (Func: Tensor::chunk)");
+    }
+    dim = pyindex(dim, dim_);
+    
+    int split_size = (shape_[dim] - 1 + chunks) / chunks;
+    
+    return split(dim, split_size);
+  }
 
-  vec<Tensor> Tensor::split(int dim, int split_size) const {}
-  vec<Tensor> Tensor::split(int dim, veci split_sections) const {}
+  vec<Tensor> Tensor::split(int dim, int split_size) const {
+    if (split_size <= 0) {
+      throw std::runtime_error("invalid size (Func: Tensor::split)");
+    }
+    dim = pyindex(dim, dim_);
+    
+    int chunk = (shape_[dim] - 1 + split_size) / split_size;
+    
+    vec<Tensor> vect(chunk);
+    for (int i = 0; i < chunk; i++) {
+      int start = i * split_size;
+      int len = std::min(shape_[dim] - start, split_size);
+      vect[i] = narrow(dim, start, len);
+    }
+    
+    return vect;
+  }
+  
+  vec<Tensor> Tensor::split(int dim, veci split_sections) const {
+    int sum = 0;
+    for (int siz : split_sections) {
+      if (siz <= 0) {
+        throw std::runtime_error("invalid size (Func: Tensor::split)");
+      }
+      sum += siz;
+    }
+    dim = pyindex(dim, dim_);
+    if (sum != shape_[dim]) {
+      throw std::runtime_error("sum not match (Func: Tensor::split)");
+    }
+    
+    vec<Tensor> vect(split_sections.size());
+    int start = 0;
+    for (int i = 0; i < split_sections.size(); i++) {
+      vect[i] = narrow(dim, start, split_sections[i]);
+      start += split_sections[i];
+    }
+    
+    return vect;
+  }
 
   Tensor Tensor::stack(const vec<Tensor>& inputs, int dim) {}
 
   Tensor Tensor::cat(const vec<Tensor>& inputs, int dim) {}
 
-  Tensor Tensor::squeeze(int dim) const {}
+  Tensor Tensor::squeeze(int dim) const {
+    dim = pyindex(dim, dim_);
+    if (shape_[dim] != 1) {
+      throw std::runtime_error("shape of dim is not 1 (Func Tensor::squeeze)");
+    }
+    
+    shape_t sq_shape(shape_);
+    shape_t sq_stride(stride_);
+    
+    sq_shape.erase(sq_shape.begin() + dim);
+    sq_stride.erase(sq_stride.begin() + dim);
+    
+    return Tensor(sq_shape, sq_stride, offset_, storage_);
+  }
 
-  Tensor Tensor::unsqueeze(int dim) const {}
+  Tensor Tensor::unsqueeze(int dim) const {
+    dim = pyindex(dim, dim_ + 1); // [0, dim_]
+    
+    shape_t usq_shape(shape_);
+    shape_t usq_stride(stride_);
+    
+    usq_shape.insert(usq_shape.begin() + dim, 1);
+    int len = dim == dim_ ? 1 : stride_[dim] * shape_[dim];
+    usq_stride.insert(usq_stride.begin() + dim, len);
+    
+    return Tensor(usq_shape, usq_stride, offset_, storage_);
+  }
   
   // check & calculate broadcast shape
   shape_t broadcast_shape(const shape_t& a, const shape_t &b) {
@@ -596,28 +762,46 @@ namespace at {
     Tensor RHS(rhs.broadcast_to(new_shape));
     return std::make_pair(LHS, RHS);
   }
-  vec<Tensor> Tensor::broadcast(const vec<Tensor>& tensors) {}
+  vec<Tensor> Tensor::broadcast(const vec<Tensor>& tensors) {
+    
+  }
 
 
 
   /*
     helper constructors
   */
-  Tensor to_singleton_tensor(dtype value, int dim) {}
+  Tensor to_singleton_tensor(dtype value, int dim) {
+    
+  }
 
-  Tensor ones(const shape_t& shape) {}
-  Tensor ones_like(const Tensor& ref) {}
+  Tensor ones(const shape_t& shape) {
+    return Tensor(shape, 1.0);
+  }
+  Tensor ones_like(const Tensor& ref) {
+    return ref.zeros_like();
+  }
 
   Tensor zeros(const shape_t& shape) {
     return Tensor(shape, 0.0);
   }
-  Tensor zeros_like(const Tensor& ref) {}
+  Tensor zeros_like(const Tensor& ref) {
+    return ref.zeros_like();
+  }
 
-  Tensor randn(const shape_t& shape) {}
-  Tensor randn_like(const Tensor& ref) {}
+  Tensor randn(const shape_t& shape) {
+    // wait for modifying
+  }
+  Tensor randn_like(const Tensor& ref) {
+    return ref.randn_like();
+  }
 
-  Tensor empty(const shape_t& shape) {}
-  Tensor empty_like(const Tensor& ref) {}
+  Tensor empty(const shape_t& shape) {
+    return Tensor(shape);
+  }
+  Tensor empty_like(const Tensor& ref) {
+    return ref.empty_like();
+  }
 
   Tensor arange(dtype start, dtype end, dtype step) {}
 

@@ -91,6 +91,7 @@ class Tensor {
   explicit Tensor(const shape_t& shape, dtype value);
   explicit Tensor(const shape_t& shape, std::function<dtype()> generator);
   explicit Tensor(const shape_t& shape, const vec<dtype>& data);
+  explicit Tensor(const shape_t& shape, int offset, Storage(storage));
   explicit Tensor(const shape_t& shape, const stride_t& stride, int offset, Storage storage);
   Tensor(const Tensor& other);
 
