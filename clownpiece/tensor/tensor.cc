@@ -687,10 +687,57 @@ namespace at {
     
     return vect;
   }
+  
+  Tensor Tensor::stack(const vec<Tensor>& inputs, int dim) {
+    if (inputs.empty()) {
+      throw std::runtime_error("empty tensorlist (Func: Tensor::stack)");
+    }
+    
+    vec<Tensor> usq_inputs(inputs.size());
+    for (int i = 0; i < inputs.size(); i++) {
+      usq_inputs[i] = inputs[i].unsqueeze(dim);
+    }
+    
+    return cat(usq_inputs, dim);
+  }
 
-  Tensor Tensor::stack(const vec<Tensor>& inputs, int dim) {}
-
-  Tensor Tensor::cat(const vec<Tensor>& inputs, int dim) {}
+  Tensor Tensor::cat(const vec<Tensor>& inputs, int dim) {
+    if (inputs.empty()) {
+      throw std::runtime_error("empty tensorlist (Func: Tensor::cat)");
+    }
+    
+    shape_t cat_shape(inputs[0].shape_);
+    int cat_dim = cat_shape.size();
+    
+    dim = pyindex(dim, cat_dim);
+    
+    for (int i = 1; i < inputs.size(); i++) {
+      auto shp = inputs[i].shape_;
+      
+      if (shp.size() != cat_dim) {
+        throw std::runtime_error("dimension should be same (Func: Tensor::cat)");
+      }
+      
+      for (int i = 0; i < cat_dim; i++) {
+        if (i == dim) continue;
+        if (cat_shape[i] != shp[i]) {
+          throw std::runtime_error("shape should be same (Func: Tensor::cat)");
+        }
+      }
+      cat_shape[dim] += shp[dim];
+    }
+    
+    Tensor cat_tensor(cat_shape);
+    int cat_offset = 0;
+    
+    for (int i = 0; i < inputs.size(); i++) {
+      int len = inputs[i].shape_[dim];
+      cat_tensor.narrow(dim, cat_offset, len).copy_(inputs[i]);
+      cat_offset += len;
+    }
+    
+    return cat_tensor;
+  }
 
   Tensor Tensor::squeeze(int dim) const {
     dim = pyindex(dim, dim_);
@@ -762,6 +809,7 @@ namespace at {
     Tensor RHS(rhs.broadcast_to(new_shape));
     return std::make_pair(LHS, RHS);
   }
+  
   vec<Tensor> Tensor::broadcast(const vec<Tensor>& tensors) {
     
   }
