@@ -437,12 +437,110 @@ namespace at {
   Tensor operator>(const Tensor& lhs, const Tensor& rhs) {
     return apply_binary_op(lhs, rhs, [](dtype a, dtype b) -> dtype { return a > b; });
   }
+  
+  // check & calculate broadcast shape
+  shape_t broadcast_shape(const shape_t& a, const shape_t &b) {
+    int dim_ = std::max(a.size(), b.size());
+    shape_t shape_(dim_);
+    for (int i = 0, asiz, bsiz; i < dim_; i++) {
+      if (i >= a.size()) asiz = 1;
+      else asiz = a[a.size() - i - 1];
+      if (i >= b.size()) bsiz = 1;
+      else bsiz = b[b.size() - i - 1];
+      
+      if (asiz != bsiz && asiz != 1 && bsiz != 1) {
+        throw std::runtime_error("not broadcastable (Func broadcast_shape");
+      }
+      shape_[dim_ - i - 1] = std::max(asiz, bsiz);
+    }
+    return shape_;
+  }
 
   /*
     matrix multiplication
   */
-  Tensor matmul(const Tensor& lhs, const Tensor& rhs) {
-    // wait for shape
+  Tensor matmul(const Tensor& lhs_c, const Tensor& rhs_c) {
+    Tensor lhs(lhs_c), rhs(rhs_c);
+    // empty
+    if (lhs.dim_ == 0 || rhs.dim_ == 0) {
+      if (lhs.dim_ == 0 && rhs.dim_ == 0) {
+        return Tensor();
+      }
+      throw std::runtime_error("invalid input mat (Func: matmul)");
+    }
+    // dot product
+    if (lhs.dim_ == 1 && rhs.dim_ == 1) {
+      if (lhs.numel_ != rhs.numel_) {
+        throw std::runtime_error("invalid dot product length (Func: matmul)");
+      }
+      dtype sum = 0;
+      for (int i = 0; i < lhs.numel_; i++) {
+        sum += lhs.data_at(i) * rhs.data_at(i);
+      }
+      return Tensor(sum);
+    }
+    
+    bool dim1_lhs = false, dim1_rhs = false;
+    // lhs 1D
+    if (lhs.dim_ == 1) {
+      lhs = lhs.unsqueeze(0); // (n) -> (1, n)
+      dim1_lhs = true;
+    }
+    // rhs 1D
+    if (rhs.dim_ == 1) {
+      rhs = rhs.unsqueeze(-1); // (n) -> (n, 1)
+      dim1_rhs = true;
+    }
+    // for faster contiguous access
+    rhs = rhs.transpose(-1, -2);
+    
+    int n = lhs.shape_[lhs.shape_.size() - 2];
+    int m = lhs.shape_[lhs.shape_.size() - 1];
+    int l = rhs.shape_[rhs.shape_.size() - 2];
+    int m1 = rhs.shape_[rhs.shape_.size() - 1];
+    
+    if (m != m1) {
+      throw std::runtime_error("size mismatch (Func: matmul)");
+    }
+    // get broadcasted shape & tensor
+    shape_t lhs_batch(lhs.shape_), rhs_batch(rhs.shape_);
+    lhs_batch.erase(lhs_batch.end() - 2, lhs_batch.end());
+    rhs_batch.erase(rhs_batch.end() - 2, rhs_batch.end());
+    shape_t brc_batch(broadcast_shape(lhs_batch, rhs_batch));
+    
+    shape_t lhs_brc(brc_batch), rhs_brc(brc_batch);
+    lhs_brc.insert(lhs_brc.end(), {n, m});
+    rhs_brc.insert(rhs_brc.end(), {l, m});
+    brc_batch.insert(brc_batch.end(), {n, l});
+    
+    Tensor lhs_tens = lhs.broadcast_to(lhs_brc).reshape({-1, n, m});
+    Tensor rhs_tens = rhs.broadcast_to(rhs_brc).reshape({-1, l, m});
+    
+    Tensor mat_tens({lhs_tens.shape_[0], n, l});
+    // compute matrix multiplication
+    for (int s = 0; s < lhs_tens.shape_[0]; s++) {
+      Tensor LHS = lhs_tens[s], RHS = rhs_tens[s], MAT = mat_tens[s];
+      // std::cerr << "s = " << s << std::endl << LHS << std::endl << RHS << std::endl;
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < l; j++) {
+          dtype sum = 0;
+          for (int k = 0; k < m; k++) {
+            sum += LHS.data_at(i * m + k) * RHS.data_at(j * m + k);
+          }
+          MAT.data_at(i * l + j) = sum;
+        }
+      }
+    }
+    
+    mat_tens = mat_tens.reshape(brc_batch);
+    if (dim1_lhs) {
+      mat_tens = mat_tens.squeeze(-2);
+    }
+    if (dim1_rhs) {
+      mat_tens = mat_tens.squeeze(-1);
+    }
+    
+    return mat_tens;
   }
   
   // Equivalent to matmul
@@ -765,24 +863,6 @@ namespace at {
     usq_stride.insert(usq_stride.begin() + dim, len);
     
     return Tensor(usq_shape, usq_stride, offset_, storage_);
-  }
-  
-  // check & calculate broadcast shape
-  shape_t broadcast_shape(const shape_t& a, const shape_t &b) {
-    int dim_ = std::max(a.size(), b.size());
-    shape_t shape_(dim_);
-    for (int i = 0, asiz, bsiz; i < dim_; i++) {
-      if (i >= a.size()) asiz = 1;
-      else asiz = a[a.size() - i - 1];
-      if (i >= b.size()) bsiz = 1;
-      else bsiz = b[b.size() - i - 1];
-      
-      if (asiz != bsiz && asiz != 1 && bsiz != 1) {
-        throw std::runtime_error("not broadcastable (Func broadcast_shape");
-      }
-      shape_[dim_ - i - 1] = std::max(asiz, bsiz);
-    }
-    return shape_;
   }
     
   Tensor Tensor::broadcast_to(const shape_t& shape) const {
