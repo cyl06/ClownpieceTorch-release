@@ -608,20 +608,73 @@ namespace at {
   Tensor sqrt(const Tensor& tensor) { return tensor.sqrt(); }
 
   Tensor Tensor::sum(int dim, bool keepdims) const {
+    dim = pyindex(dim, dim_);
     
+    int dim_size = shape_[dim];
+    Tensor trans = transpose(dim, -1);
+    shape_t origin_shape(trans.shape_);
+    origin_shape[origin_shape.size() - 1] = 1;
+    
+    trans = trans.reshape({-1, dim_size});
+    
+    Tensor ans({trans.shape_[0], 1});
+    for (int i = 0; i < trans.shape_[0]; i++) {
+      Tensor TEN = trans[i];
+      dtype sum = 0;
+      for (int j = 0; j < dim_size; j++) {
+        sum += TEN.data_at(j);
+      }
+      ans[i].data_at(0) = sum;
+    }
+    
+    ans = ans.reshape(origin_shape).transpose(dim, -1);
+    if (!keepdims) {
+      ans = ans.squeeze(dim);
+    }
+    return ans;
   }
 
   Tensor sum(const Tensor& tensor, int dim, bool keepdims) { return tensor.sum(dim, keepdims); }
 
   std::pair<Tensor, Tensor> Tensor::max(int dim, bool keepdims) const {
+    dim = pyindex(dim, dim_);
     
+    int dim_size = shape_[dim];
+    Tensor trans = transpose(dim, -1);
+    shape_t origin_shape(trans.shape_);
+    origin_shape[origin_shape.size() - 1] = 1;
+    
+    trans = trans.reshape({-1, dim_size});
+    
+    Tensor ans({trans.shape_[0], 1}), idx({trans.shape_[0], 1});
+    for (int i = 0; i < trans.shape_[0]; i++) {
+      Tensor TEN = trans[i];
+      dtype mx = TEN.data_at(0); int id = 0;
+      for (int j = 1; j < dim_size; j++) {
+        if (TEN.data_at(j) > mx) {
+          mx = TEN.data_at(j), id = j;
+        }
+      }
+      ans[i].data_at(0) = mx;
+      idx[i].data_at(0) = id;
+    }
+    
+    ans = ans.reshape(origin_shape).transpose(dim, -1);
+    idx = idx.reshape(origin_shape).transpose(dim, -1);
+    if (!keepdims) {
+      ans = ans.squeeze(dim);
+      idx = idx.squeeze(dim);
+    }
+    return std::make_pair(ans, idx);
   }
 
   std::pair<Tensor, Tensor> max(const Tensor& tensor, int dim, bool keepdims) { return tensor.max(dim, keepdims); }
 
   Tensor Tensor::softmax(int dim) const {
-    
+    Tensor exp_tens= exp();
+    return exp_tens / exp_tens.sum(dim, true);
   }
+  
   Tensor softmax(const Tensor& tensor, int dim) { return tensor.softmax(dim); }
 
   /*
@@ -1000,7 +1053,59 @@ namespace at {
   /*
     Week3 adds-on
   */
-  Tensor Tensor::mean(int dim, bool keepdims) const {}
+  Tensor Tensor::mean(int dim, bool keepdims) const {
+    dim = pyindex(dim, dim_);
+    
+    int dim_size = shape_[dim];
+    Tensor trans = transpose(dim, -1);
+    shape_t origin_shape(trans.shape_);
+    origin_shape[origin_shape.size() - 1] = 1;
+    
+    trans = trans.reshape({-1, dim_size});
+    
+    Tensor ans({trans.shape_[0], 1});
+    for (int i = 0; i < trans.shape_[0]; i++) {
+      Tensor TEN = trans[i];
+      dtype sum = 0;
+      for (int j = 0; j < dim_size; j++) {
+        sum += TEN.data_at(j);
+      }
+      ans[i].data_at(0) = sum / dim_size;
+    }
+    
+    ans = ans.reshape(origin_shape).transpose(dim, -1);
+    if (!keepdims) {
+      ans = ans.squeeze(dim);
+    }
+    return ans;
+  }
 
-  Tensor Tensor::var(int dim, bool keepdims, bool unbiased) const {}
+  Tensor Tensor::var(int dim, bool keepdims, bool unbiased) const {
+    dim = pyindex(dim, dim_);
+    
+    int dim_size = shape_[dim];
+    Tensor trans = transpose(dim, -1);
+    shape_t origin_shape(trans.shape_);
+    origin_shape[origin_shape.size() - 1] = 1;
+    
+    trans = trans.reshape({-1, dim_size});
+    
+    Tensor ans({trans.shape_[0], 1});
+    for (int i = 0; i < trans.shape_[0]; i++) {
+      Tensor TEN = trans[i];
+      dtype sum1 = 0, sum2 = 0;
+      for (int j = 0; j < dim_size; j++) {
+        dtype val = TEN.data_at(j);
+        sum1 += val, sum2 += val * val;
+      }
+      dtype sum = sum2 - sum1 * sum1 / dim_size;
+      ans[i].data_at(0) = unbiased ? sum / (dim_size - 1) : sum / dim_size;
+    }
+    
+    ans = ans.reshape(origin_shape).transpose(dim, -1);
+    if (!keepdims) {
+      ans = ans.squeeze(dim);
+    }
+    return ans;
+  }
 };
