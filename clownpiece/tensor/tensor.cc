@@ -265,12 +265,31 @@ namespace at {
 
   Tensor Tensor::scatter_(int dim, const Tensor& index, const Tensor& src) const {
     dim = pyindex(dim, dim_);
-    if (!match_shape(shape_, index.shape_) || !match_shape(shape_, src.shape_)) {
-      throw std::runtime_error("shape not match (Func Tensor::scatter_)");
+    
+    if (dim_ != index.dim_ || dim_ != src.dim_) {
+      throw std::runtime_error("dim should be same (Func Tensor::scatter_)");
     }
-    for (int i = 0; i < numel_; i++) {
-      // not finish
+    
+    for (int i = 0; i < dim_; i++) {
+      if (i == dim) continue;
+      if (shape_[i] != index.shape_[i] || shape_[i] != src.shape_[i]) {
+        throw std::runtime_error("shape not match (Func Tensor::scatter_)");
+      }
     }
+    
+    Tensor re_self = transpose(dim, -1);
+    Tensor re_index = index.transpose(dim, -1).reshape({-1, index.shape_[dim]});
+    Tensor re_src = src.transpose(dim, -1).reshape({-1, src.shape_[dim]});
+    
+    for (int i = 0; i < re_index.shape_[0]; i++) {
+      Tensor IDX = re_index[i], SRC = re_src[i];
+      for (int j = 0; j < index.shape_[dim]; j++) {
+        int pos = IDX.data_at(j);
+        re_self.data_at(i * shape_[dim] + pos) = SRC.data_at(j);
+      }
+    }
+    
+    return *this;
   }
   
   /*

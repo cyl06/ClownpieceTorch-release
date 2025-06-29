@@ -77,6 +77,24 @@ def copyfrom2(impl = torch):
     else:
       return False
 
+@testcase(name="scatter_hard", score=10)
+
+def myscatter1(impl=torch):
+  a = impl.Tensor([[[1, 3, 4], [2, 6, 7]], [[1, 7, 9], [3, 8, 1]], [[11, 17, 19], [13, 81, 111]]])
+  # print(a)
+  # print(a.shape)
+  if impl.__name__ == "torch":
+    index = torch.tensor([[[0, 1, 2], [2, 1, 0]], [[1, 0, 2], [2, 0, 1]]], dtype=torch.long)
+  else:
+    index = impl.Tensor([[[0, 1, 2], [2, 1, 0]], [[1, 0, 2], [2, 0, 1]]])
+  # print(index)
+  # print(index.shape)
+  src = impl.Tensor([[[-1, -2, -3], [-4, -5, -6]], [[-7, -8, -9], [-10, -11, -12]]])
+  # print(src)
+  # print(src.shape)
+  a.scatter_(0, index, src)
+  return a
+
 
 def testsets_part2():
   utils1()
@@ -86,6 +104,7 @@ def testsets_part2():
   clone2()
   copyfrom1()
   copyfrom2()
+  myscatter1()
 
 if __name__ == "__main__":
   print("Beginning grading part 2")
