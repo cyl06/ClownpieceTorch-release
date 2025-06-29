@@ -617,6 +617,128 @@ def broadcast_pair_case6(impl):
         result = "raises6"
     return result
 
+@testcase(name="broadcast_list_case1", score=10)
+
+def broadcast_list_case1(impl):
+    a = impl.Tensor([[1], [2]])     # shape=(2,1)
+    b = impl.Tensor([[10, 20, 30]]) # shape=(1,3)
+    c1 = impl.Tensor([[9]])         # shape=(1,1)
+    
+    try:
+        if impl.__name__ == "torch":
+            result = impl.broadcast_tensors(a, b, c1)
+        else:
+            result = impl.broadcast_tensors([a, b, c1])
+    except Exception:
+        result = "raises1"
+    return result
+
+@testcase(name="broadcast_list_case2", score=10)
+
+def broadcast_list_case2(impl):
+    c = impl.Tensor([100, 200, 300])   # shape=(3,)
+    d = impl.Tensor([[4, 5, 6]])       # shape=(1,3)
+    e1 = impl.Tensor([[[1, 2, 3, 4]]]) # shape=(1,1,4)
+    try:
+        if impl.__name__ == "torch":
+            result = impl.broadcast_tensors(c, d, e1)
+        else:
+            result = impl.broadcast_tensors([c, d, e1])
+    except Exception:
+        result = "raises2"
+    return result
+
+@testcase(name="broadcast_list_case3", score=10)
+
+def broadcast_list_case3(impl):
+    e = impl.Tensor([[1, 2, 3], [4, 5, 6]])      # (2,3)
+    f = impl.Tensor([[7], [8]])                  # (2,1)
+    g1 = impl.Tensor([[[1, 2], [3, 4], [5, 6]]]) # (1,3,2)
+    try:
+        if impl.__name__ == "torch":
+            result = impl.broadcast_tensors(e, f, g1)
+        else:
+            result = impl.broadcast_tensors([e, f, g1])
+    except Exception:
+        result = "raises3"
+    return result
+
+@testcase(name="broadcast_list_case4", score=10)
+
+def broadcast_list_case4(impl):
+    e = impl.Tensor([[1, 2, 3], [4, 5, 6]]) # (2,3)
+    f = impl.Tensor([[7], [8]])             # (2,1)
+    c = impl.Tensor([100, 200, 300])        # (3)
+    try:
+        if impl.__name__ == "torch":
+            result = impl.broadcast_tensors(e, f, c)
+        else:
+            result = impl.broadcast_tensors([e, f, c])
+    except Exception:
+        result = "raises4"
+    return result
+
+@testcase(name="broadcast_list_case5", score=10)
+
+def broadcast_list_case5(impl):
+    e = impl.Tensor([[1, 2, 3], [4, 5, 6]])  # (2,3)
+    g = impl.Tensor([[1,2,3,4],[5,6,7,8]])   # (2,4)
+    try:
+        if impl.__name__ == "torch":
+            result = impl.broadcast_tensors(e, g)
+        else:
+            result = impl.broadcast_tensors([e, g])
+    except Exception:
+        result = "raises5"
+    return result
+
+@testcase(name="broadcast_list_case6", score=10)
+
+def broadcast_list_case6(impl):
+    if impl.__name__ == "torch":
+        r = impl.tensor(42)
+        s = impl.tensor(24)
+        rr = impl.tensor(11)
+        ss = impl.tensor(99)
+    else:
+        r = impl.Tensor(42)
+        s = impl.Tensor(24)
+        rr = impl.Tensor(11)
+        ss = impl.Tensor(99)
+    try:
+        if impl.__name__ == "torch":
+            result = impl.broadcast_tensors(r, s, rr, ss)
+        else:
+            result = impl.broadcast_tensors([r, s, rr, ss])
+    except Exception:
+        result = "raises6"
+    return result
+
+@testcase(name="broadcast_list_case7", score=10)
+
+def broadcast_list_case7(impl):
+    try:
+        if impl.__name__ == "torch":
+            result = impl.broadcast_tensors()
+        else:
+            result = impl.broadcast_tensors([])
+    except Exception:
+        result = "raises4"
+    return result
+
+@testcase(name="broadcast_list_case7", score=10)
+
+def broadcast_list_case8(impl):
+    a = impl.arange(5, 50)
+    try:
+        if impl.__name__ == "torch":
+            result = impl.broadcast_tensors(a)
+        else:
+            result = impl.broadcast_tensors([a])
+    except Exception:
+        result = "raises4"
+    return result
+
 def testsets_part7():
     permute1()
     
@@ -662,6 +784,14 @@ def testsets_part7():
     broadcast_pair_case5()
     broadcast_pair_case6()
     
+    broadcast_list_case1()
+    broadcast_list_case2()
+    broadcast_list_case3()
+    broadcast_list_case4()
+    broadcast_list_case5()
+    broadcast_list_case6()
+    broadcast_list_case7()
+    broadcast_list_case8()
     
 if __name__ == "__main__":
     print("Beginning grading part7")

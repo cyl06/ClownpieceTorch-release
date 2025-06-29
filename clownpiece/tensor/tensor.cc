@@ -963,7 +963,24 @@ namespace at {
   }
   
   vec<Tensor> Tensor::broadcast(const vec<Tensor>& tensors) {
+    if (tensors.empty()) {
+      return vec<Tensor>();
+    }
+    if (tensors.size() == 1) {
+      return tensors;
+    }
     
+    shape_t brc_shape(tensors[0].shape_);
+    for (int i = 1; i < tensors.size(); i++) {
+      brc_shape = broadcast_shape(brc_shape, tensors[i].shape_);
+    }
+    
+    vec<Tensor> brc_tens(tensors.size());
+    for (int i = 0; i < tensors.size(); i++) {
+      brc_tens[i] = tensors[i].broadcast_to(brc_shape);
+    }
+    
+    return brc_tens;
   }
 
 
