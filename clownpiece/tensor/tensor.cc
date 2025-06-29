@@ -900,14 +900,15 @@ namespace at {
     helper constructors
   */
   Tensor to_singleton_tensor(dtype value, int dim) {
-    
+    return Tensor(shape_t(dim, 1), value);
   }
 
   Tensor ones(const shape_t& shape) {
     return Tensor(shape, 1.0);
   }
+  
   Tensor ones_like(const Tensor& ref) {
-    return ref.zeros_like();
+    return ref.ones_like();
   }
 
   Tensor zeros(const shape_t& shape) {
@@ -918,8 +919,12 @@ namespace at {
   }
 
   Tensor randn(const shape_t& shape) {
-    // wait for modifying
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::normal_distribution<dtype> dist(0.0f, 1.0f);
+    return Tensor(shape, [&gen, &dist]() -> dtype { return dist(gen); });
   }
+  
   Tensor randn_like(const Tensor& ref) {
     return ref.randn_like();
   }
@@ -927,15 +932,70 @@ namespace at {
   Tensor empty(const shape_t& shape) {
     return Tensor(shape);
   }
+  
   Tensor empty_like(const Tensor& ref) {
     return ref.empty_like();
   }
 
-  Tensor arange(dtype start, dtype end, dtype step) {}
+  Tensor arange(dtype start, dtype end, dtype step) {
+    if (step == 0) {
+      throw std::runtime_error("step must be nonzero (Func: arrange)");
+    }
+    if (start == end) {
+      return Tensor();
+    }
+    if (start < end && step < 0 || start > end && step > 0) {
+      throw std::runtime_error("start and end inconsistent with step sign (Func: arrange)");
+    }
+    
+    int siz = ceil((end - start) / step);
+    vec<dtype> data(siz);
+    for (int i = 0; i < siz; i++) {
+      data[i] = start + step * i;
+    }
+    
+    return Tensor({siz}, data);
+  }
 
-  Tensor range(dtype start, dtype end, dtype step) {}
+  Tensor range(dtype start, dtype end, dtype step) {
+    if (step == 0) {
+      throw std::runtime_error("step must be nonzero (Func: arrange)");
+    }
+    if (start == end) {
+      return Tensor({1}, start);
+    }
+    if (start < end && step < 0 || start > end && step > 0) {
+      throw std::runtime_error("start and end inconsistent with step sign (Func: arrange)");
+    }
+    
+    int siz = floor((end - start) / step) + 1;
+    vec<dtype> data(siz);
+    for (int i = 0; i < siz; i++) {
+      data[i] = start + step * i;
+    }
+    
+    return Tensor({siz}, data);
+  }
 
-  Tensor linspace(dtype start, dtype end, int num_steps) {}
+  Tensor linspace(dtype start, dtype end, int num_steps) {
+    if (num_steps < 0) {
+      throw std::runtime_error("number of steps must be non-negative (Func: linspace)");
+    }
+    if (num_steps == 0) {
+      return Tensor();
+    }
+    if (num_steps == 1) {
+      return Tensor({1}, start);
+    }
+    
+    dtype step = (end - start) / (num_steps - 1);
+    vec<dtype> data(num_steps);
+    for (int i = 0; i < num_steps; i++) {
+      data[i] = start + step * i;
+    }
+    
+    return Tensor({num_steps}, data);
+  }
   
   /*
     Week3 adds-on
