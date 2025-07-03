@@ -519,6 +519,9 @@ class Tensor(TensorBase):
   def __init__(self, data: TensorBase, requires_grad: bool = None) -> "Tensor":
     super().__init__(data)
     self.requires_grad_(requires_grad)
+    self.grad = None
+    self.grad_fn = None
+    self.output_nr = 0
 
   # set requires_grad based on is_grad_enabled.
   # ! you must implement this method: grader lib uses this function
@@ -527,41 +530,41 @@ class Tensor(TensorBase):
       requires_grad = is_grad_enabled()
     
     self.requires_grad = requires_grad and is_grad_enabled()
-  # """
-  #   Other
-  # """
-  # def backward(self, grad: Optional["Tensor"]=None):
-  #   from clownpiece.autograd.autograd import backward
-  #   backward(self, grad)
+  """
+    Other
+  """
+  def backward(self, grad: Optional["Tensor"]=None):
+    from clownpiece.autograd.autograd import backward
+    backward(self, grad)
       
-  # def requires_grad_(self, requires_grad:bool=None):
-  #   if requires_grad is None:
-  #     requires_grad = is_grad_enabled()
-  #   self.requires_grad = requires_grad 
+  def requires_grad_(self, requires_grad:bool=None):
+    if requires_grad is None:
+      requires_grad = is_grad_enabled()
+    self.requires_grad = requires_grad 
   
-  # def tolist(self):
-  #   return super().tolist()
+  def tolist(self):
+    return super().tolist()
 
       
-  # """
-  #   Operator Binding for Autograd
-  # """
+  """
+    Operator Binding for Autograd
+  """
   
-  # """
-  #   Part 1
-  # """
-  # @tensor_op('clone', 'Clone')
-  # def clone(self, FunctionClass=None)->"Tensor":
-  #   return FunctionClass().apply(self)
+  """
+    Part 1
+  """
+  @tensor_op('clone', 'Clone')
+  def clone(self, FunctionClass=None)->"Tensor":
+    return FunctionClass().apply(self)
 
   
-  # @tensor_op('contiguous', 'Contiguous')
-  # def contiguous(self, FunctionClass=None)->"Tensor":
-  #   return FunctionClass().apply(self)
+  @tensor_op('contiguous', 'Contiguous')
+  def contiguous(self, FunctionClass=None)->"Tensor":
+    return FunctionClass().apply(self)
   
-  # @tensor_op('__getitem__', 'Subscriptor')
-  # def __getitem__(self, index, FunctionClass=None)->"Tensor":
-  #   return FunctionClass().apply(self, index)
+  @tensor_op('__getitem__', 'Subscriptor')
+  def __getitem__(self, index, FunctionClass=None)->"Tensor":
+    return FunctionClass().apply(self, index)
     
   # """
   #   Part 2

@@ -2,6 +2,7 @@ from typing import Dict, Iterable, List, Optional, Union, Any
 
 from clownpiece.tensor import Tensor, ones_like, zeros_like
 from clownpiece.utils import wrap_tuple
+from collections import deque
 
 """
     Autograd Module
@@ -39,14 +40,25 @@ class Edge():
     
     @staticmethod
     def gradient_edge(tensor: Tensor) -> "Edge":
-      # your implement here
+        # your implement here
+        
+        # case 0: not a tensor (for convenience)
+        if not isinstance(tensor, Tensor):
+            return Edge(0, None)
 
-      # case 1: tensor is not a leaf tensor -> use it's grad_fn and output_nr
+        # case 1: tensor is not a leaf tensor -> use it's grad_fn and output_nr
+        if tensor.grad_fn is not None:
+            return Edge(tensor.output_nr, tensor.grad_fn)
 
-      # case 2: tensor is a leaf tensor and requires grad -> AccumulateGrad Function
+        # case 2: tensor is a leaf tensor and requires grad -> AccumulateGrad Function
+        elif tensor.requires_grad:
+            from .function import AccumulateGrad
+            return Edge(0, AccumulateGrad(tensor))
 
-      # case 3: tensor is a leaf tensor and requires no grad -> node = None
-      pass
+        # case 3: tensor is a leaf tensor and requires no grad -> node = None
+        else:
+            return Edge(0, None)
+        
 
 class GraphRoot(Node):
     """
@@ -54,17 +66,21 @@ class GraphRoot(Node):
     """
 
     def __init__(self, tensor: Tensor, grad: Tensor):
-      # your implement here
-
-      # step1. store the grad
-      # step2. create a single edge points to tensor.grad_fn
-      pass
+        # your implement here
+        
+        # step1. store the grad
+        super().__init__()
+        self.tensor = tensor
+        self.grad = grad
+        
+        # step2. create a single edge points to tensor.grad_fn
+        self.next_edges = [Edge.gradient_edge(tensor)]
     
     def run(self, *args, **kargs):
-      # your implement here
+        # your implement here
 
-      # step1. return the stored grad
-      pass
+        # step1. return the stored grad
+        return self.grad
 
 class NodeTask():
     """
@@ -83,11 +99,15 @@ class NodeTask():
         
     def run(self):
         # your implement here
-
+        
         # step1. run the node with inputs
+        grads = self.node.run(*self.inputs)
+        grads = wrap_tuple(grads)
 
         # step2. fill the input buffer in GraphTask
-        pass
+        for edge, grad in zip(self.node.next_edges, grads):
+            if edge is not None and edge.node is not None:
+                self.base.fill_input(edge.node, grad, edge.input_nr)
 
 
 class GraphTask():
@@ -117,25 +137,61 @@ class GraphTask():
     # helper function to assign node_id and initialize self.nodes, dependencies and inputs_buffer
     def _construct_graph(self):
         # your implement here
-        pass
+        id_cnt = 0
+        queue = deque(self.roots)
+        
+        while queue:
+            node = queue.popleft()
+            if node is None or node.node_id is not None:
+                continue
+            
+            self.nodes.append(node)
+            id_cnt += 1
+            node.node_id = id_cnt
+            
+            for edge in node.next_edges:
+                if edge is not None and edge.node is not None:
+                    queue.append(edge.node)
+        
+        self.dependencies = {node : 0 for node in self.nodes}
+        for node in self.nodes:
+            for edge in node.next_edges:
+                if edge is not None and edge.node is not None:
+                    self.dependencies[edge.node] += 1
+        
+        self.inputs_buffer = {node : [None] * self.dependencies[node] for node in self.nodes}
+        
         
     # execute
     def run(self):
         # your implement here
-        pass
+        self._run_single_thread()
 
     # for debug
     def _run_single_thread(self):
         # your implement here
 
         # perform topological sort to execute the graph
+        queue = deque()
+        for node in self.nodes:
+            if self.dependencies[node] == 0:
+                queue.append(NodeTask(node, (), self))
 
         # while queue is not empty:
-        # 1. node_task = queue.pop()
-        # 2. node_task.run()
-        # 3. decrement dependencies count for target nodes of outbound edges
-        # 4. enqueue a new NodeTask if dependencies drops to zero. (remember to delete the node in inputs_buffer to release memory.)
-        pass
+        while queue:
+            # 1. node_task = queue.pop()
+            node_task = queue.popleft()
+            # 2. node_task.run()
+            node_task.run()
+            
+            for edge in node_task.node.next_edges:
+                if edge is not None and edge.node is not None:
+                    # 3. decrement dependencies count for target nodes of outbound edges
+                    self.dependencies[edge.node] -= 1
+                    # 4. enqueue a new NodeTask if dependencies drops to zero. (remember to delete the node in inputs_buffer to release memory.)
+                    if self.dependencies[edge.node] == 0:
+                        inputs = self.inputs_buffer.pop(edge.node)
+                        queue.append(NodeTask(edge.node, inputs, self))
 
     # for production
     def _run_multi_thread(self):
@@ -154,8 +210,10 @@ class GraphTask():
     # accumulate input_grad to self.inputs_buffer[node][input_nr]
     def fill_input(self, node: Node, input_grad: Tensor, input_nr: int):
         # your implement here
-
-        pass
+        if self.inputs_buffer[node][input_nr] is None:
+            self.inputs_buffer[node][input_nr] = input_grad
+        else:
+            self.inputs_buffer[node][input_nr] += input_grad
 
 
 """

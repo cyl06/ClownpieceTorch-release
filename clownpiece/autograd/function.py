@@ -52,26 +52,37 @@ class Function(Node):
     
     # run forward pass
     def apply(self, *args, **kwargs):
-      # your implement here
+        # your implement here
 
-      # step 1. initialize self.ctx and populate self.next_edges
+        # step 1. initialize self.ctx and populate self.next_edges
+        self.ctx = Context()
+        self.next_edges = [Edge.gradient_edge(arg) for arg in args]
 
-      # step 2. outputs = self.forward(...) with no_grad
+        # step 2. outputs = self.forward(...) with no_grad
+        with no_grad():
+            outputs = self.forward(self.ctx, *args, **kwargs)
 
-      # step 3. set grad_fn for outputs to self
+        # step 3. set grad_fn for outputs to self
+        outputs = wrap_tuple(outputs)
+        for i, out in enumerate(outputs):
+            if isinstance(out, Tensor):
+                out.requires_grad = True
+                out.grad_fn, out.output_nr = self, i
 
-      # step 4. return outputs
+        # step 4. return outputs
+        return outputs[0] if len(outputs) == 1 else outputs
 
-      pass
     
     # run backward pass
     def run(self, *args):
-      # your implement here
+        # your implement here
 
-      # step 1. grad_inputs = self.backward(...) with no_grad
+        # step 1. grad_inputs = self.backward(...) with no_grad
+        with no_grad():
+            grad_inputs = self.backward(self.ctx, *args)
 
-      # step 2. return grad_inputs
-      pass
+        # step 2. return grad_inputs
+        return wrap_tuple(grad_inputs)
 
 class AccumulateGrad(Function):
     """
@@ -80,9 +91,10 @@ class AccumulateGrad(Function):
     grad_fn for leaf tensors
     """
     def __init__(self, input: Tensor):
-      # your implement here
-
-      pass
+        # your implement here
+        super().__init__()
+        self.ctx = Context()
+        self.ctx.input = input
     
     # this forward should never be called
     @staticmethod
@@ -91,9 +103,12 @@ class AccumulateGrad(Function):
     
     @staticmethod
     def backward(ctx: Context, output_grad: Tensor):
-      # your implement here
-      
-      pass
+        # your implement here
+        if ctx.input.requires_grad:
+            if ctx.input.grad is None:
+                ctx.input.grad = zeros(ctx.input.shape)
+            ctx.input.grad += output_grad
+        return None
 
 """
     Clone Contiguous
@@ -111,11 +126,11 @@ class Clone(Function):
 class Contiguous(Function):
     @staticmethod
     def forward(ctx: Context, input: Tensor):
-        pass
+        return input.contiguous()
     
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor):
-        pass
+        return grad_output
     
 """
     Subscriptor
@@ -124,12 +139,16 @@ class Contiguous(Function):
 class Subscriptor(Function):
     @staticmethod
     def forward(ctx: Context, input: Tensor, index_or_slice: Union[int, slice, List[int], List[slice]]):
-        pass
+        ctx.input_shape = input.shape
+        ctx.index_or_slice = index_or_slice
+        return input[index_or_slice]
     
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor):
-        pass
-    
+        grad_input = zeros(ctx.input_shape)
+        sub_grad_input = grad_input[ctx.index_or_slice]
+        sub_grad_input.copy_(grad_output)
+        return grad_input, None
 """
     Element-wise Binary and Unary Operators
 """
