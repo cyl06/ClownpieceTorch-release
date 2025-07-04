@@ -566,53 +566,53 @@ class Tensor(TensorBase):
   def __getitem__(self, index, FunctionClass=None)->"Tensor":
     return FunctionClass().apply(self, index)
     
-  # """
-  #   Part 2
-  # """
-  # @tensor_op('__neg__', 'Neg')
-  # def __neg__(self, FunctionClass=None)->"Tensor":
-  #   return FunctionClass().apply(self)
+  """
+    Part 2
+  """
+  @tensor_op('__neg__', 'Neg')
+  def __neg__(self, FunctionClass=None)->"Tensor":
+    return FunctionClass().apply(self)
   
-  # @tensor_op('sign', 'Sign')
-  # def sign(self, FunctionClass=None)->"Tensor":
-  #   return FunctionClass().apply(self)
+  @tensor_op('sign', 'Sign')
+  def sign(self, FunctionClass=None)->"Tensor":
+    return FunctionClass().apply(self)
   
-  # @tensor_op('abs', 'Abs')
-  # def abs(self, FunctionClass=None)->"Tensor":
-  #   return FunctionClass().apply(self) 
+  @tensor_op('abs', 'Abs')
+  def abs(self, FunctionClass=None)->"Tensor":
+    return FunctionClass().apply(self) 
   
-  # @tensor_op('sin', 'Sin')
-  # def sin(self, FunctionClass=None)->"Tensor":
-  #   return FunctionClass().apply(self)
+  @tensor_op('sin', 'Sin')
+  def sin(self, FunctionClass=None)->"Tensor":
+    return FunctionClass().apply(self)
   
-  # @tensor_op('cos', 'Cos')
-  # def cos(self, FunctionClass=None)->"Tensor":
-  #   return FunctionClass().apply(self)
+  @tensor_op('cos', 'Cos')
+  def cos(self, FunctionClass=None)->"Tensor":
+    return FunctionClass().apply(self)
   
-  # @tensor_op('tanh', 'Tanh')
-  # def tanh(self, FunctionClass=None)->"Tensor":
-  #   return FunctionClass().apply(self)
+  @tensor_op('tanh', 'Tanh')
+  def tanh(self, FunctionClass=None)->"Tensor":
+    return FunctionClass().apply(self)
   
-  # @tensor_op('clamp', 'Clamp')
-  # def clamp(self, min_val, max_val, FunctionClass=None)->"Tensor":
-  #   return FunctionClass().apply(self, min_val, max_val)
+  @tensor_op('clamp', 'Clamp')
+  def clamp(self, min_val, max_val, FunctionClass=None)->"Tensor":
+    return FunctionClass().apply(self, min_val, max_val)
 
 
-  # @tensor_op('log', 'Log')
-  # def log(self, FunctionClass=None)->"Tensor":
-  #   return FunctionClass().apply(self)
+  @tensor_op('log', 'Log')
+  def log(self, FunctionClass=None)->"Tensor":
+    return FunctionClass().apply(self)
   
-  # @tensor_op('exp', 'Exp')
-  # def exp(self, FunctionClass=None)->"Tensor":
-  #   return FunctionClass().apply(self)
+  @tensor_op('exp', 'Exp')
+  def exp(self, FunctionClass=None)->"Tensor":
+    return FunctionClass().apply(self)
   
-  # @tensor_op('pow', 'Pow')
-  # def pow(self, exponent, FunctionClass=None)->"Tensor":
-  #   return FunctionClass().apply(self, exponent)
+  @tensor_op('pow', 'Pow')
+  def pow(self, exponent, FunctionClass=None)->"Tensor":
+    return FunctionClass().apply(self, exponent)
 
-  # @tensor_op('sqrt', 'Sqrt')
-  # def sqrt(self, FunctionClass=None)->"Tensor":
-  #   return FunctionClass().apply(self)
+  @tensor_op('sqrt', 'Sqrt')
+  def sqrt(self, FunctionClass=None)->"Tensor":
+    return FunctionClass().apply(self)
   
   # """
   #   Part 3

@@ -156,11 +156,11 @@ class Subscriptor(Function):
 class Neg(Function):
     @staticmethod
     def forward(ctx: Context, input: Tensor):
-        pass
+        return -input
     
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor):
-        pass
+        return -grad_output
 
 # backward method for broadcast
 def reduce_broadcast(grad_output: Tensor, input_shape: List[int], output_shape: List[int], end_dim: int = 0) -> Tensor:
@@ -226,92 +226,119 @@ class Div(Function):
 class Sign(Function):
     @staticmethod
     def forward(ctx: Context, input: Tensor):
-        pass
+        ctx.input_shape = input.shape
+        return input.sign()
     
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor):
-        pass
+        return zeros(ctx.input_shape)
     
 class Abs(Function):
     @staticmethod
     def forward(ctx: Context, input: Tensor):
-        pass
+        ctx.save_for_backward(input)
+        return input.abs()
     
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor):
-        pass
+        input = ctx.get_saved_tensors()[0]
+        return grad_output * input.sign()
     
 class Sin(Function):
     @staticmethod
     def forward(ctx: Context, input: Tensor):
-        pass
+        ctx.save_for_backward(input)
+        return input.sin()
         
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor):
-        pass
+        input = ctx.get_saved_tensors()[0]
+        return grad_output * input.cos()
 
 class Cos(Function):
     @staticmethod
     def forward(ctx: Context, input: Tensor):
-        pass
+        ctx.save_for_backward(input)
+        return input.cos()
     
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor):
-        pass
+        input = ctx.get_saved_tensors()[0]
+        return grad_output * -(input.sin())
 
 class Tanh(Function):
     @staticmethod
     def forward(ctx: Context, input: Tensor):
-        pass
+        output = input.tanh()
+        ctx.save_for_backward(output)
+        return output
     
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor):
-        pass
+        output = ctx.get_saved_tensors()[0]
+        return grad_output * (1 - output * output) # broadcast has been perfectly completed
 
 class Clamp(Function):
     @staticmethod
     def forward(ctx: Context, input: Tensor, min_val: float, max_val: float):
-        pass
+        ctx.save_for_backward(input)
+        ctx.min_val = min_val
+        ctx.max_val = max_val
+        return input.clamp(min_val, max_val)
     
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor):
-        pass
+        input = ctx.get_saved_tensors()[0]
+        mask = (ctx.min_val <= input) * (input <= ctx.max_val)
+        return grad_output * mask, None, None
 
 class Log(Function):
     @staticmethod
     def forward(ctx: Context, input: Tensor):
-        pass
+        ctx.save_for_backward(input)
+        return input.log()
     
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor):
-        pass
+        input = ctx.get_saved_tensors()[0]
+        return grad_output / input
 
 class Exp(Function):
     @staticmethod
     def forward(ctx: Context, input: Tensor):
-        pass
+        output = input.exp()
+        ctx.save_for_backward(output)
+        return output
     
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor):
-        pass
+        output = ctx.get_saved_tensors()[0]
+        return grad_output * output
 
 class Pow(Function):
     @staticmethod
     def forward(ctx: Context, input: Tensor, exponent: float): 
-        pass
+        output = input.pow(exponent)
+        ctx.save_for_backward(input, output)
+        ctx.exponent = exponent
+        return output
     
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor):
-        pass
+        input, output = ctx.get_saved_tensors()[0:2]
+        return grad_output * ctx.exponent * output / input
     
 class Sqrt(Function):
     @staticmethod
     def forward(ctx: Context, input: Tensor):
-        pass
+        output = input.sqrt()
+        ctx.save_for_backward(output)
+        return output
     
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor):
-        pass
+        output = ctx.get_saved_tensors()[0]
+        return grad_output / (output * 2)
     
 """
     Matrix Multiplication
