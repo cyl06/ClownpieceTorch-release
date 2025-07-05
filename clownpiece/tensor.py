@@ -659,23 +659,23 @@ class Tensor(TensorBase):
   def __rtruediv__(self, other, FunctionClass=None)->"Tensor":
     return FunctionClass().apply(other, self)
   
-  # """
-  # Part 4
-  # """
-  # @tensor_op('matmul', 'MatMul')
-  # def matmul(self, other, FunctionClass=None)->"Tensor":
-  #   if not isinstance(other, Tensor):
-  #     raise TypeError(f"Expected Tensor, got {type(other).__name__}")
+  """
+  Part 4
+  """
+  @tensor_op('matmul', 'MatMul')
+  def matmul(self, other, FunctionClass=None)->"Tensor":
+    if not isinstance(other, Tensor):
+      raise TypeError(f"Expected Tensor, got {type(other).__name__}")
     
-  #   return FunctionClass().apply(self, other)
+    return FunctionClass().apply(self, other)
   
-  # def __matmul__(self, other)->"Tensor":    
-  #   return self.matmul(other)
+  def __matmul__(self, other)->"Tensor":    
+    return self.matmul(other)
   
-  # def __rmatmul__(self, other)->"Tensor":
-  #   if not isinstance(other, Tensor):
-  #     raise TypeError(f"Expected Tensor, got {type(other).__name__}")
-  #   return other.matmul(self)
+  def __rmatmul__(self, other)->"Tensor":
+    if not isinstance(other, Tensor):
+      raise TypeError(f"Expected Tensor, got {type(other).__name__}")
+    return other.matmul(self)
   
   # """
   # Part 5

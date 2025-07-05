@@ -165,11 +165,10 @@ class Neg(Function):
 # backward method for broadcast
 def reduce_broadcast(grad_output: Tensor, input_shape: List[int], output_shape: List[int], end_dim: int = 0) -> Tensor:
     # end_dim argument is for matmul, which only broadcasts dim <= dim() - 2
-    # just completed no matmul version yet
     extra_dim = len(output_shape) - len(input_shape)
     for i in range(extra_dim):
         grad_output = grad_output.sum(0, keepdims=False)
-    for i in range(len(input_shape)):
+    for i in range(len(input_shape) + end_dim):
         if input_shape[i] == 1 and output_shape[extra_dim + i] > 1:
             grad_output = grad_output.sum(i, keepdims=True)
     return grad_output
@@ -367,11 +366,38 @@ class Sqrt(Function):
 class MatMul(Function):
     @staticmethod
     def forward(ctx: Context, input1: Tensor, input2: Tensor):
-        pass
+        ctx.save_for_backward(input1, input2)
+        return input1.matmul(input2)
     
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor):
-        pass
+        input1, input2 = ctx.get_saved_tensors()[0:2]
+        ipt1_1D, ipt2_1D = (input1.dim() == 1), (input2.dim() == 1)
+        
+        if ipt1_1D == 1:
+            input1 = input1.unsqueeze(-2)
+        if ipt2_1D == 1:
+            input2 = input2.unsqueeze(-1)
+        
+        if ipt1_1D == 1 and ipt2_1D == 1:
+            grad_output = grad_output.reshape([1, 1])
+        elif ipt1_1D == 1:
+            grad_output = grad_output.unsqueeze(-2)
+        elif ipt2_1D == 1:
+            grad_output = grad_output.unsqueeze(-1)
+        
+        grad_input1_broadcasted = grad_output.matmul(input2.transpose())
+        grad_input2_broadcasted = input1.transpose().matmul(grad_output)
+        
+        grad_input1 = reduce_broadcast(grad_input1_broadcasted, input1.shape, grad_input1_broadcasted.shape, end_dim=-2)
+        grad_input2 = reduce_broadcast(grad_input2_broadcasted, input2.shape, grad_input2_broadcasted.shape, end_dim=-2)
+        
+        if ipt1_1D == 1:
+            grad_input1 = grad_input1.squeeze(-2)
+        if ipt2_1D == 1:
+            grad_input2 = grad_input2.squeeze(-1)
+        
+        return grad_input1, grad_input2
 
 """
     Reduction and Normalization Operations
