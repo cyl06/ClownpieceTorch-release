@@ -8,7 +8,7 @@ import copy
 from clownpiece.tensor import Tensor, zeros, zeros_like
 from clownpiece.autograd.autograd import Node, Edge
 from clownpiece.autograd.no_grad import no_grad
-from clownpiece.utils import wrap_tuple
+from clownpiece.utils_ import wrap_tuple
 
 
 class Context():
@@ -164,64 +164,84 @@ class Neg(Function):
 
 # backward method for broadcast
 def reduce_broadcast(grad_output: Tensor, input_shape: List[int], output_shape: List[int], end_dim: int = 0) -> Tensor:
-  # end_dim argument is for matmul, which only broadcasts dim <= dim() - 2
-  pass
+    # end_dim argument is for matmul, which only broadcasts dim <= dim() - 2
+    # just completed no matmul version yet
+    extra_dim = len(output_shape) - len(input_shape)
+    for i in range(extra_dim):
+        grad_output = grad_output.sum(0, keepdims=False)
+    for i in range(len(input_shape)):
+        if input_shape[i] == 1 and output_shape[extra_dim + i] > 1:
+            grad_output = grad_output.sum(i, keepdims=True)
+    return grad_output
 
 # binary op forward decorator
 def binary_op_forward_wrapper(forward_impl):
-  # save input shapes into ctx
-  # call forward_impl
-  pass
+    def wrapper(ctx: Context, input1: Tensor, input2: Tensor):
+        # save input shapes into ctx
+        ctx.input1_shape = input1.shape
+        ctx.input2_shape = input2.shape
+        # call forward_impl
+        return forward_impl(ctx, input1, input2)
+    return wrapper
 
 # binary op backward decorator
 def binary_op_backward_wrapper(backward_impl):
-  # call backward_impl to get grad_inputs_broadcasted
-  # call reduce_broadcast to get grad_inputs
-  pass
+    def wrapper(ctx: Context, grad_output: Tensor):
+        # call backward_impl to get grad_inputs_broadcasted
+        grad_input1_broadcasted, grad_input2_broadcasted = backward_impl(ctx, grad_output)
+        # call reduce_broadcast to get grad_inputs
+        grad_input1 = reduce_broadcast(grad_input1_broadcasted, ctx.input1_shape, grad_output.shape)
+        grad_input2 = reduce_broadcast(grad_input2_broadcasted, ctx.input2_shape, grad_output.shape)
+        return grad_input1, grad_input2
+    return wrapper
 
 class Add(Function):
     @staticmethod
     @binary_op_forward_wrapper
     def forward(ctx: Context, input1: Tensor, input2: Tensor):
-        pass
+        return input1 + input2
     
     @staticmethod
     @binary_op_backward_wrapper
     def backward(ctx: Context, grad_output: Tensor):
-        pass
+        return grad_output, grad_output
     
 class Sub(Function):
     @staticmethod
     @binary_op_forward_wrapper
     def forward(ctx: Context, input1: Tensor, input2: Tensor):
-        pass
+        return input1 - input2
     
     @staticmethod
     @binary_op_backward_wrapper
     def backward(ctx: Context, grad_output: Tensor):
-        pass
+        return grad_output, -grad_output
     
 class Mul(Function):
     @staticmethod
     @binary_op_forward_wrapper
     def forward(ctx: Context, input1: Tensor, input2: Tensor):
-        pass
+        ctx.save_for_backward(input1, input2)
+        return input1 * input2
     
     @staticmethod
     @binary_op_backward_wrapper
     def backward(ctx, grad_output):
-        pass
+        input1, input2 = ctx.get_saved_tensors()[0:2]
+        return grad_output * input2, grad_output * input1
     
 class Div(Function):
     @staticmethod
     @binary_op_forward_wrapper
     def forward(ctx: Context, input1: Tensor, input2: Tensor):
-        pass
+        ctx.save_for_backward(input1, input2)
+        return input1 / input2
     
     @staticmethod
     @binary_op_backward_wrapper
     def backward(ctx, grad_output):
-        pass
+        input1, input2 = ctx.get_saved_tensors()[0:2]
+        return grad_output / input2, grad_output * input1 / -(input2 * input2)
     
 class Sign(Function):
     @staticmethod

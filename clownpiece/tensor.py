@@ -618,46 +618,46 @@ class Tensor(TensorBase):
   #   Part 3
   # """
   
-  # @tensor_op('__add__', 'Add')
-  # @scalar_to_tensor
-  # def __add__(self, other, FunctionClass=None)->"Tensor":
-  #   return FunctionClass().apply(self, other)
+  @tensor_op('__add__', 'Add')
+  @scalar_to_tensor
+  def __add__(self, other, FunctionClass=None)->"Tensor":
+    return FunctionClass().apply(self, other)
   
-  # @tensor_op('__radd__', 'Add')
-  # @scalar_to_tensor
-  # def __radd__(self, other, FunctionClass=None)->"Tensor":
-  #   return FunctionClass().apply(other, self)
+  @tensor_op('__radd__', 'Add')
+  @scalar_to_tensor
+  def __radd__(self, other, FunctionClass=None)->"Tensor":
+    return FunctionClass().apply(other, self)
 
-  # @tensor_op('__sub__', 'Sub')
-  # @scalar_to_tensor
-  # def __sub__(self, other, FunctionClass=None)->"Tensor":
-  #   return FunctionClass().apply(self, other)
+  @tensor_op('__sub__', 'Sub')
+  @scalar_to_tensor
+  def __sub__(self, other, FunctionClass=None)->"Tensor":
+    return FunctionClass().apply(self, other)
   
-  # @tensor_op('__rsub__', 'Sub')
-  # @scalar_to_tensor
-  # def __rsub__(self, other, FunctionClass=None)->"Tensor":
-  #   return FunctionClass().apply(other, self)
+  @tensor_op('__rsub__', 'Sub')
+  @scalar_to_tensor
+  def __rsub__(self, other, FunctionClass=None)->"Tensor":
+    return FunctionClass().apply(other, self)
   
-  # @tensor_op('__mul__', 'Mul')
-  # @scalar_to_tensor
-  # def __mul__(self, other, FunctionClass=None)->"Tensor":
-  #   print("Tensor __mul__ called with other:", other)
-  #   return FunctionClass().apply(self, other)
+  @tensor_op('__mul__', 'Mul')
+  @scalar_to_tensor
+  def __mul__(self, other, FunctionClass=None)->"Tensor":
+    print("Tensor __mul__ called with other:", other)
+    return FunctionClass().apply(self, other)
     
-  # @tensor_op('__rmul__', 'Mul')
-  # @scalar_to_tensor
-  # def __rmul__(self, other, FunctionClass=None)->"Tensor":
-  #   return FunctionClass().apply(other, self)
+  @tensor_op('__rmul__', 'Mul')
+  @scalar_to_tensor
+  def __rmul__(self, other, FunctionClass=None)->"Tensor":
+    return FunctionClass().apply(other, self)
 
-  # @tensor_op('__truediv__', 'Div')
-  # @scalar_to_tensor
-  # def __truediv__(self, other, FunctionClass=None)->"Tensor":
-  #   return FunctionClass().apply(self, other)
+  @tensor_op('__truediv__', 'Div')
+  @scalar_to_tensor
+  def __truediv__(self, other, FunctionClass=None)->"Tensor":
+    return FunctionClass().apply(self, other)
   
-  # @tensor_op('__rtruediv__', 'Div')
-  # @scalar_to_tensor
-  # def __rtruediv__(self, other, FunctionClass=None)->"Tensor":
-  #   return FunctionClass().apply(other, self)
+  @tensor_op('__rtruediv__', 'Div')
+  @scalar_to_tensor
+  def __rtruediv__(self, other, FunctionClass=None)->"Tensor":
+    return FunctionClass().apply(other, self)
   
   # """
   # Part 4
@@ -790,20 +790,20 @@ def empty(shape, requires_grad: bool = False) -> Tensor:
 def empty_like(tensor: Tensor, requires_grad: bool = False) -> Tensor:
   return Tensor.empty(tensor.shape, requires_grad=requires_grad)
 
-def zeros(shape, requires_grad=None):
+def zeros(shape, requires_grad=False):
   return Tensor.zeros(shape, requires_grad=requires_grad)
 
-def zeros_like(tensor, requires_grad=None):
+def zeros_like(tensor: Tensor, requires_grad=False) -> Tensor:
   return Tensor.zeros(tensor.shape, requires_grad=requires_grad)
 
-def ones(shape, requires_grad=None):
+def ones(shape, requires_grad=False):
   return Tensor.ones(shape, requires_grad=requires_grad)
 
-def ones_like(tensor, requires_grad=None):
+def ones_like(tensor: Tensor, requires_grad=False) -> Tensor:
   return Tensor.ones(tensor.shape, requires_grad=requires_grad)
 
-def randn(shape, requires_grad=None):
+def randn(shape, requires_grad=False):
   return Tensor.randn(shape, requires_grad=requires_grad)
 
-def randn_like(tensor, requires_grad=None):
+def randn_like(tensor, requires_grad=False):
   return Tensor.randn(tensor.shape, requires_grad=requires_grad)
