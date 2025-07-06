@@ -700,66 +700,66 @@ class Tensor(TensorBase):
   def var(self, dim: int, keepdims: bool = False, unbiased: bool = True, FunctionClass=None) -> "Tensor":
       return FunctionClass().apply(self, dim, keepdims, unbiased)
   
-  # """
-  # Part 6
-  # """
+  """
+  Part 6
+  """
   
-  # @tensor_op('permute', 'Permute')
-  # def permute(self, perm: List[int], FunctionClass=None) -> "Tensor":
-  #     return FunctionClass().apply(self, perm)
+  @tensor_op('permute', 'Permute')
+  def permute(self, perm: List[int], FunctionClass=None) -> "Tensor":
+      return FunctionClass().apply(self, perm)
 
-  # @tensor_op('transpose', 'Transpose')
-  # def transpose(self, dim0: int, dim1: int, FunctionClass=None) -> "Tensor":
-  #     return FunctionClass().apply(self, dim0, dim1)
+  @tensor_op('transpose', 'Transpose')
+  def transpose(self, dim0: int, dim1: int, FunctionClass=None) -> "Tensor":
+      return FunctionClass().apply(self, dim0, dim1)
 
-  # @tensor_op('reshape', 'Reshape')
-  # def reshape(self, shape: List[int], FunctionClass=None) -> "Tensor":
-  #     if not isinstance(shape, list):
-  #       if isinstance(shape, int):
-  #         shape = [shape]
-  #       else:
-  #         raise TypeError(f"Expected list or int for shape, got {type(shape).__name__}")
-  #     return FunctionClass().apply(self, shape)
+  @tensor_op('reshape', 'Reshape')
+  def reshape(self, shape: List[int], FunctionClass=None) -> "Tensor":
+      if not isinstance(shape, list):
+        if isinstance(shape, int):
+          shape = [shape]
+        else:
+          raise TypeError(f"Expected list or int for shape, got {type(shape).__name__}")
+      return FunctionClass().apply(self, shape)
 
-  # @tensor_op('view', 'View')
-  # def view(self, shape: List[int], FunctionClass=None) -> "Tensor":
-  #     return FunctionClass().apply(self, shape)
+  @tensor_op('view', 'View')
+  def view(self, shape: List[int], FunctionClass=None) -> "Tensor":
+      return FunctionClass().apply(self, shape)
 
-  # @tensor_op('narrow', 'Narrow')
-  # def narrow(self, dim: int, start: int, length: int, FunctionClass=None) -> "Tensor":
-  #     return FunctionClass().apply(self, dim, start, length)
+  @tensor_op('narrow', 'Narrow')
+  def narrow(self, dim: int, start: int, length: int, FunctionClass=None) -> "Tensor":
+      return FunctionClass().apply(self, dim, start, length)
 
-  # @tensor_op('chunk', 'Chunk')
-  # def chunk(self, chunks: int, dim: int = 0, FunctionClass=None) -> List["Tensor"]:
-  #     return FunctionClass().apply(self, chunks, dim)
+  @tensor_op('chunk', 'Chunk')
+  def chunk(self, chunks: int, dim: int = 0, FunctionClass=None) -> List["Tensor"]:
+      return FunctionClass().apply(self, chunks, dim)
 
-  # @tensor_op('split', 'Split')
-  # def split(self, split: Union[int, List[int]], dim: int = 0, FunctionClass=None) -> List["Tensor"]:
-  #     return FunctionClass().apply(self, split, dim)
+  @tensor_op('split', 'Split')
+  def split(self, split: Union[int, List[int]], dim: int = 0, FunctionClass=None) -> List["Tensor"]:
+      return FunctionClass().apply(self, split, dim)
 
-  # @tensor_op('stack', 'Stack')
-  # def stack(inputs: List["Tensor"], dim: int = 0, FunctionClass=None) -> "Tensor":
-  #     return FunctionClass().apply(*inputs, dim=dim)
+  @tensor_op('stack', 'Stack')
+  def stack(inputs: List["Tensor"], dim: int = 0, FunctionClass=None) -> "Tensor":
+      return FunctionClass().apply(*inputs, dim=dim)
 
-  # @tensor_op('cat', 'Cat')
-  # def cat(inputs: List["Tensor"], dim: int = 0, FunctionClass=None) -> "Tensor":
-  #     return FunctionClass().apply(*inputs, dim=dim)
+  @tensor_op('cat', 'Cat')
+  def cat(inputs: List["Tensor"], dim: int = 0, FunctionClass=None) -> "Tensor":
+      return FunctionClass().apply(*inputs, dim=dim)
 
-  # @tensor_op('squeeze', 'Squeeze')
-  # def squeeze(self, dim: int = 0, FunctionClass=None) -> "Tensor":
-  #     return FunctionClass().apply(self, dim)
+  @tensor_op('squeeze', 'Squeeze')
+  def squeeze(self, dim: int = 0, FunctionClass=None) -> "Tensor":
+      return FunctionClass().apply(self, dim)
 
-  # @tensor_op('unsqueeze', 'Unsqueeze')
-  # def unsqueeze(self, dim: int = 0, FunctionClass=None) -> "Tensor":
-  #     return FunctionClass().apply(self, dim)
+  @tensor_op('unsqueeze', 'Unsqueeze')
+  def unsqueeze(self, dim: int = 0, FunctionClass=None) -> "Tensor":
+      return FunctionClass().apply(self, dim)
 
-  # @tensor_op('broadcast_to', 'BroadcastTo')
-  # def broadcast_to(self, shape: List[int], FunctionClass=None) -> "Tensor":
-  #     return FunctionClass().apply(self, shape)
+  @tensor_op('broadcast_to', 'BroadcastTo')
+  def broadcast_to(self, shape: List[int], FunctionClass=None) -> "Tensor":
+      return FunctionClass().apply(self, shape)
 
-  # @tensor_op('broadcast', 'Broadcast')
-  # def broadcast(inputs: List["Tensor"], FunctionClass=None) -> "Tensor":
-  #     return FunctionClass().apply(*inputs)
+  @tensor_op('broadcast', 'Broadcast')
+  def broadcast(inputs: List["Tensor"], FunctionClass=None) -> "Tensor":
+      return FunctionClass().apply(*inputs)
       
   """
   STR
