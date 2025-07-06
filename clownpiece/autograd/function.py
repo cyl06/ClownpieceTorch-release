@@ -403,37 +403,62 @@ class MatMul(Function):
     Reduction and Normalization Operations
 """
 
-def reduce_forward_wrapper(forward_impl):
-    pass
+# def reduce_forward_wrapper(forward_impl):
+#     def wrapper(ctx: Context, input: Tensor, dim: Union[int, List[int], None], keepdims: bool = False):
+#         return forward_impl(ctx, input, dim, keepdims)
+#     return wrapper
 
 class Sum(Function):
     @staticmethod
-    @reduce_forward_wrapper
+    # @reduce_forward_wrapper
     def forward(ctx: Context, input: Tensor, dim: Union[int, List[int], None], keepdims: bool = False):
-        pass
+        ctx.input_shape = input.shape
+        ctx.dim, ctx.keepdims = dim, keepdims
+        return input.sum(dim, keepdims)
     
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor):
-        pass
+        input_shape, dims = ctx.input_shape, ctx.dim
+        if not ctx.keepdims and dims is not None:
+            if isinstance(dims, int):
+                dims = [dims]
+            dims = list(dims)
+            dims.sort()
+            for dim in dims:
+                grad_output.unsqueeze(dim)
+        grad_input = grad_output.broadcast_to(input_shape)
+        return grad_input, None, None
     
 class Max(Function):
     @staticmethod
-    @reduce_forward_wrapper
+    # @reduce_forward_wrapper
     def forward(ctx: Context, input: Tensor, dim: int, keepdims: bool = False):
-        pass
+        result, indices = input.max(dim, keepdims)
+        ctx.save_for_backward(indices)
+        ctx.input_shape = input.shape
+        ctx.dim, ctx.keepdims = dim, keepdims
+        return result, indices
     
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor, grad_indices: Tensor = None):
-        pass
+        indices = ctx.get_saved_tensors()[0]
+        input_shape, dim = ctx.input_shape, ctx.dim
+        if not ctx.keepdims:
+            grad_output = grad_output.unsqueeze(dim)
+            indices = indices.unsqueeze(dim)
+        grad_input = zeros(input_shape)
+        grad_input.scatter_(dim, indices, grad_output)
+        return grad_input, None, None
     
 class Softmax(Function):
     @staticmethod
     def forward(ctx: Context, input: Tensor, dim: int):
-        pass
+        ctx.output, ctx.dim = input.softmax(dim), dim
+        return ctx.output
     
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor):
-        pass
+        return ctx.output * (grad_output - (grad_output * ctx.output).sum(ctx.dim, keepdims=True))
     
 """
     Shape Manipulation
