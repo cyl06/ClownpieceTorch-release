@@ -1,16 +1,27 @@
+# a = 24
+# b = [2, 5]
+# print(list([a]), list(b))
+
 import torch
 
-a = torch.tensor([[[1, 3, 4], [2, 6, 7]], [[1, 7, 9], [3, 8, 1]], [[11, 17, 19], [13, 81, 111]]])
+a = torch.tensor([[2.0, 3.0], [3.0, 4.0]], requires_grad=True)
+# # a = torch.tensor([[[1, 3, 4], [2, 6, 7]], [[1, 7, 9], [3, 8, 1]], [[11, 17, 19], [13, 81, 111]]])
+
+b = a.sum(dim = None, keepdims = True)
+# b.backward(torch.ones_like(b))
+print(b)
+# print(a.grad)
+
 # print(a)
 # print(a.shape)
-index = torch.tensor([])
-# index = torch.tensor([[[0, 1, 2], [2, 1, 0]], [[1, 0, 2], [2, 0, 1]]])
-# print(index)
-# print(index.shape)
-src = torch.tensor([[[-1, -2, -3], [-4, -5, -6]], [[-7, -8, -9], [-10, -11, -12]]])
-# print(src)
-# print(src.shape)
-print(a.scatter_(0, index, src))
+# index = torch.tensor([])
+# # index = torch.tensor([[[0, 1, 2], [2, 1, 0]], [[1, 0, 2], [2, 0, 1]]])
+# # print(index)
+# # print(index.shape)
+# src = torch.tensor([[[-1, -2, -3], [-4, -5, -6]], [[-7, -8, -9], [-10, -11, -12]]])
+# # print(src)
+# # print(src.shape)
+# print(a.scatter_(0, index, src))
 
 #tensor([[[ -1,  -8,   4],
 #         [  2, -11,  -6]],

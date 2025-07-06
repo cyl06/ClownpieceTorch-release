@@ -692,6 +692,14 @@ class Tensor(TensorBase):
   def softmax(self, dim=-1, FunctionClass=None)->"Tensor":
     return FunctionClass().apply(self, dim)
   
+  @tensor_op('mean', 'Mean')
+  def mean(self, dim: int, keepdims: bool = False, FunctionClass=None) -> "Tensor":
+      return FunctionClass().apply(self, dim, keepdims)
+    
+  @tensor_op('var', 'Var')
+  def var(self, dim: int, keepdims: bool = False, unbiased: bool = True, FunctionClass=None) -> "Tensor":
+      return FunctionClass().apply(self, dim, keepdims, unbiased)
+  
   # """
   # Part 6
   # """
@@ -752,16 +760,6 @@ class Tensor(TensorBase):
   # @tensor_op('broadcast', 'Broadcast')
   # def broadcast(inputs: List["Tensor"], FunctionClass=None) -> "Tensor":
   #     return FunctionClass().apply(*inputs)
-  
-  
-    
-  # @tensor_op('mean', 'Mean')
-  # def mean(self, dim: int, keepdims: bool = False, FunctionClass=None) -> "Tensor":
-  #     return FunctionClass().apply(self, dim, keepdims)
-    
-  # @tensor_op('var', 'Var')
-  # def var(self, dim: int, keepdims: bool = False, unbiased: bool = True, FunctionClass=None) -> "Tensor":
-  #     return FunctionClass().apply(self, dim, keepdims, unbiased)
       
   """
   STR

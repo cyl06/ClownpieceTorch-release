@@ -92,6 +92,29 @@ def var_op(impl=torch):
     
     return a.grad, b, c
 
+@testcase(name="comprehensive", score=0)
+def comprehensive(impl=torch):
+    a = impl.Tensor([[1.0, 2.0, 3.0],
+                     [4.0, 5.0, 6.0],
+                     [7.0, 8.0, 9.0]])
+    a.requires_grad_()
+    # 1. max over dim=1 -> shape: [3, 1]
+    max_out, _ = a.max(dim=1, keepdims=True)
+    # 2. subtract max from a (broadcast), then apply softmax over dim=1
+    normed = a - max_out
+    softmax_out = normed.softmax(dim=1)  # shape: [3, 3]
+    # 3. mean over dim=0 -> shape: [3]
+    mean_out = softmax_out.mean(dim=0)  # shape: [3]
+    # 4. sum over dim=[0] (list) -> scalar
+    summed = mean_out.sum(dim=[0])  # scalar
+    # 5. combine with another path: unbiased var over dim=1 -> shape: [3]
+    var_out = a.var(dim=1, keepdims=False, unbiased=True)  # shape: [3]
+    # 6. final = dot(summed_scalar, var_out.mean())
+    final = summed * var_out.mean(dim=0)
+    final.backward(impl.ones_like(final))
+
+    return a.grad, final
+
 def testsets_part5():
     print_separate_line()
     print("Testing Part5 Max, Sum, Softmax...")
@@ -99,8 +122,9 @@ def testsets_part5():
     sum_op()
     sum_op_hard()
     softmax_op()
-    # mean_op()
-    # var_op()
+    mean_op()
+    var_op()
+    comprehensive()
 
 if __name__ == "__main__":
     testsets_part5()

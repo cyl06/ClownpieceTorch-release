@@ -425,7 +425,7 @@ class Sum(Function):
             dims = list(dims)
             dims.sort()
             for dim in dims:
-                grad_output.unsqueeze(dim)
+                grad_output = grad_output.unsqueeze(dim)
         grad_input = grad_output.broadcast_to(input_shape)
         return grad_input, None, None
     
@@ -459,6 +459,41 @@ class Softmax(Function):
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor):
         return ctx.output * (grad_output - (grad_output * ctx.output).sum(ctx.dim, keepdims=True))
+
+class Mean(Function):
+    @staticmethod
+    def forward(ctx: Context, input: Tensor, dim: int, keepdims: bool = False):
+        ctx.input_shape = input.shape
+        ctx.dim, ctx.keepdims = dim, keepdims
+        return input.mean(dim, keepdims)
+    
+    @staticmethod
+    def backward(ctx: Context, grad_output: Tensor):
+        input_shape, dim = ctx.input_shape, ctx.dim
+        if not ctx.keepdims:
+            grad_output = grad_output.unsqueeze(dim)
+        grad_input = grad_output.broadcast_to(input_shape) / input_shape[dim]
+        return grad_input, None, None
+
+class Var(Function):
+    @staticmethod
+    def forward(ctx: Context, input: Tensor, dim: int, keepdims: bool = False, unbiased: bool = True):
+        ctx.save_for_backward(input)
+        ctx.input_shape = input.shape
+        ctx.dim, ctx.keepdims, ctx.unbiased = dim, keepdims, unbiased
+        ctx.mean = input.mean(dim, True)
+        return input.var(dim, keepdims, unbiased)
+    
+    @staticmethod
+    def backward(ctx: Context, grad_output: Tensor):
+        input = ctx.get_saved_tensors()[0]
+        input_shape, dim = ctx.input_shape, ctx.dim
+        dim_size = input_shape[dim]
+        if not ctx.keepdims:
+            grad_output = grad_output.unsqueeze(dim)
+        grad_input = grad_output.broadcast_to(input_shape) * 2 * (input - ctx.mean)
+        grad_input = grad_input / (dim_size - 1) if ctx.unbiased else grad_input / dim_size
+        return grad_input, None, None, None
     
 """
     Shape Manipulation
