@@ -218,9 +218,9 @@ class GraphTask():
                     
                     node_task.run()
                     
-                    for edge in node_task.node.next_edges:
-                        if edge is not None and edge.node is not None:
-                            with self.lock:
+                    with self.lock:
+                        for edge in node_task.node.next_edges:
+                            if edge is not None and edge.node is not None:
                                 self.dependencies[edge.node] -= 1
                                 if self.dependencies[edge.node] == 0:
                                     inputs = self.inputs_buffer.pop(edge.node)
