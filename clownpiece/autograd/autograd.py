@@ -3,6 +3,8 @@ from typing import Dict, Iterable, List, Optional, Union, Any
 from clownpiece.tensor import Tensor, ones_like, zeros_like
 from clownpiece.utils_ import wrap_tuple
 from collections import deque
+from queue import Queue
+import threading
 
 """
     Autograd Module
@@ -133,6 +135,7 @@ class GraphTask():
         self.dependencies = {}
         self.inputs_buffer = {}
         self._construct_graph()
+        self.lock = threading.Lock()
         
     # helper function to assign node_id and initialize self.nodes, dependencies and inputs_buffer
     def _construct_graph(self):
@@ -165,7 +168,8 @@ class GraphTask():
     # execute
     def run(self):
         # your implement here
-        self._run_single_thread()
+        # self._run_single_thread()
+        self._run_multi_thread()
 
     # for debug
     def _run_single_thread(self):
@@ -198,22 +202,57 @@ class GraphTask():
         # your implement here
 
         # step1. maintain a shared ready queue for NodeTasks
+        ready_queue = Queue()
+        lock = threading.Lock()
 
         # step2. def a worker function, similar to _run_single_thread.
         # be careful: do not use `while queue is not empty` as exit condition directly. (why?)
-
+        def worker():
+            while True:
+                # 1. node_task = queue.pop()
+                try:
+                    node_task = ready_queue.get(block=False)
+                except:
+                    break
+                # 2. node_task.run()
+                node_task.run()
+                
+                for edge in node_task.node.next_edges:
+                    if edge is not None and edge.node is not None:
+                        with lock:
+                            # 3. decrement dependencies count for target nodes of outbound edges
+                            self.dependencies[edge.node] -= 1
+                            # 4. enqueue a new NodeTask if dependencies drops to zero. (remember to delete the node in inputs_buffer to release memory.)
+                            if self.dependencies[edge.node] == 0:
+                                inputs = self.inputs_buffer.pop(edge.node)
+                                ready_queue.put(NodeTask(edge.node, inputs, self))
+                ready_queue.task_done()
+        
+        for node in self.nodes:
+            if self.dependencies[node] == 0:
+                ready_queue.put(NodeTask(node, (), self))
+        
         # step3. spawn multiple worker threads.
+        num_threads = 4
+        threads = []
+        for _ in range(num_threads):
+            t = threading.Thread(target=worker)
+            t.start()
+            threads.append(t)
 
         # step4. wait for threads to join.
-        pass
+        ready_queue.join()
+        for t in threads:
+            t.join()
                     
     # accumulate input_grad to self.inputs_buffer[node][input_nr]
     def fill_input(self, node: Node, input_grad: Tensor, input_nr: int):
         # your implement here
-        if self.inputs_buffer[node][input_nr] is None:
-            self.inputs_buffer[node][input_nr] = input_grad
-        else:
-            self.inputs_buffer[node][input_nr] += input_grad
+        with self.lock:
+            if self.inputs_buffer[node][input_nr] is None:
+                self.inputs_buffer[node][input_nr] = input_grad
+            else:
+                self.inputs_buffer[node][input_nr] = self.inputs_buffer[node][input_nr] + input_grad
 
 
 """
@@ -230,6 +269,9 @@ def backward(tensors: Union[Tensor, List[Tensor]], grads: Optional[Union[Tensor,
     graph_roots = [
         GraphRoot(tensor, grad) for tensor, grad in zip(tensors, grads) if tensor.requires_grad
     ]
+    
+    if not graph_roots:
+        raise ValueError("No tensors with requires_grad=True found. Cannot perform backward pass.")
 
     # execute with GraphTask
     gt = GraphTask(graph_roots)
