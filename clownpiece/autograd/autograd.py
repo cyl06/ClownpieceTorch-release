@@ -201,32 +201,37 @@ class GraphTask():
     def _run_multi_thread(self):
         # your implement here
 
-        # step1. maintain a shared ready queue for NodeTasks
+        # step1. maintain a shared ready queue for NodeTasks=
         ready_queue = Queue()
-        lock = threading.Lock()
 
         # step2. def a worker function, similar to _run_single_thread.
         # be careful: do not use `while queue is not empty` as exit condition directly. (why?)
+        
         def worker():
-            while True:
-                # 1. node_task = queue.pop()
-                try:
-                    node_task = ready_queue.get(block=False)
-                except:
-                    break
-                # 2. node_task.run()
-                node_task.run()
-                
-                for edge in node_task.node.next_edges:
-                    if edge is not None and edge.node is not None:
-                        with lock:
-                            # 3. decrement dependencies count for target nodes of outbound edges
-                            self.dependencies[edge.node] -= 1
-                            # 4. enqueue a new NodeTask if dependencies drops to zero. (remember to delete the node in inputs_buffer to release memory.)
-                            if self.dependencies[edge.node] == 0:
-                                inputs = self.inputs_buffer.pop(edge.node)
-                                ready_queue.put(NodeTask(edge.node, inputs, self))
-                ready_queue.task_done()
+            nonlocal ready_queue, exceptions, completed
+            try:
+                while completed < len(self.nodes):
+                    try:
+                        node_task = ready_queue.get(block=False)
+                    except:
+                        break
+                    
+                    node_task.run()
+                    
+                    for edge in node_task.node.next_edges:
+                        if edge is not None and edge.node is not None:
+                            with self.lock:
+                                self.dependencies[edge.node] -= 1
+                                if self.dependencies[edge.node] == 0:
+                                    inputs = self.inputs_buffer.pop(edge.node)
+                                    ready_queue.put(NodeTask(edge.node, inputs, self))
+                    completed += 1
+                    ready_queue.task_done()
+            except Exception as exc:
+                exceptions.append(exc)
+        
+        exceptions = []
+        completed = 0
         
         for node in self.nodes:
             if self.dependencies[node] == 0:
@@ -244,6 +249,9 @@ class GraphTask():
         ready_queue.join()
         for t in threads:
             t.join()
+        
+        if exceptions:
+            raise Exception(exceptions)
                     
     # accumulate input_grad to self.inputs_buffer[node][input_nr]
     def fill_input(self, node: Node, input_grad: Tensor, input_nr: int):
@@ -270,8 +278,8 @@ def backward(tensors: Union[Tensor, List[Tensor]], grads: Optional[Union[Tensor,
         GraphRoot(tensor, grad) for tensor, grad in zip(tensors, grads) if tensor.requires_grad
     ]
     
-    if not graph_roots:
-        raise ValueError("No tensors with requires_grad=True found. Cannot perform backward pass.")
+    # if not graph_roots:
+    #     raise ValueError("No tensors with requires_grad=True found. Cannot perform backward pass.")
 
     # execute with GraphTask
     gt = GraphTask(graph_roots)
