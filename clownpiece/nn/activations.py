@@ -18,10 +18,10 @@ class ReLU(Module):
     
 class Tanh(Module):
   def __init__(self):
-    pass
+    super().__init__()
 
   def forward(self, x: Tensor) -> Tensor:
-    pass
+    return x.tanh()
       
 class LeakyReLU(Module):
   def __init__(self, negative_slope: float = 0.01):

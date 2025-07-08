@@ -168,8 +168,8 @@ class GraphTask():
     # execute
     def run(self):
         # your implement here
-        # self._run_single_thread()
-        self._run_multi_thread()
+        self._run_single_thread()
+        # self._run_multi_thread()
 
     # for debug
     def _run_single_thread(self):

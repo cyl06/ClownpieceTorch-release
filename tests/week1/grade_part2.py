@@ -92,9 +92,9 @@ def myscatter1(impl=torch):
   src = impl.Tensor([[[-1, -2, -3], [-4, -5, -6]], [[-7, -8, -9], [-10, -11, -12]]])
   # print(src)
   # print(src.shape)
-  b = a.scatter_(0, index, src)
+  a.scatter_(0, index, src)
   
-  return a, b
+  return a
 
 
 def testsets_part2():

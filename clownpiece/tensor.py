@@ -709,7 +709,7 @@ class Tensor(TensorBase):
       return FunctionClass().apply(self, perm)
 
   @tensor_op('transpose', 'Transpose')
-  def transpose(self, dim0: int, dim1: int, FunctionClass=None) -> "Tensor":
+  def transpose(self, dim0: int = -1, dim1: int = -2, FunctionClass=None) -> "Tensor":
       return FunctionClass().apply(self, dim0, dim1)
 
   @tensor_op('reshape', 'Reshape')
