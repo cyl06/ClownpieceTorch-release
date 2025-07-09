@@ -18,6 +18,13 @@ class Linear(Module):
     self.out_features = out_features
     self.weight = Parameter(Tensor.empty((out_features, in_features)))
     self.bias = Parameter(Tensor.empty((out_features,))) if bias else None
+    self.reset_parameters()
+  
+  def reset_parameters(self) -> None:
+    b = math.sqrt(1 / self.in_features)
+    init.uniform_(self.weight, -b, b)
+    if self.bias is not None:
+      init.uniform_(self.bias, -b, b)
 
   def forward(self, x: Tensor) -> Tensor:
     y = x @ self.weight.transpose()
