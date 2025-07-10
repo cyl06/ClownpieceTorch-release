@@ -5,16 +5,17 @@ from clownpiece.nn.module import Module
 
 class Sigmoid(Module):
   def __init__(self):
-    pass
+    super().__init__()
   
   def forward(self, x: Tensor) -> Tensor:
-    pass
+    return 1 / (1 + (-x).exp())
   
 class ReLU(Module):
   def __init__(self):
-    pass
+    super().__init__()
+    
   def forward(self, x: Tensor) -> Tensor:
-    pass
+    return x * (x > 0)
     
 class Tanh(Module):
   def __init__(self):
@@ -25,7 +26,8 @@ class Tanh(Module):
       
 class LeakyReLU(Module):
   def __init__(self, negative_slope: float = 0.01):
-    pass
+    super().__init__()
+    self.negative_slope = negative_slope
 
   def forward(self, x: Tensor) -> Tensor:
-    pass
+    return x * (x > 0) + x * (x <= 0) * self.negative_slope

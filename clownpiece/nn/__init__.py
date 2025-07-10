@@ -6,6 +6,6 @@ from .activations import Sigmoid, Tanh, ReLU, LeakyReLU
 
 from .containers import Sequential, ModuleList, ModuleDict
 
-from .layers import Linear, LayerNorm, BatchNorm, MultiheadAttention
+from .layers import Linear, Embedding, LayerNorm, BatchNorm, MultiheadAttention
 
 from .loss import MSELoss, CrossEntropyLoss
