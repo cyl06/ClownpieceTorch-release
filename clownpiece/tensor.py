@@ -155,7 +155,7 @@ class TensorBase:
   
   @classmethod
   def stack(cls, inputs: List["TensorBase"], dim=0, **kwargs):
-    print("Base Stack called with inputs:", inputs, "dim:", dim)
+    # print("Base Stack called with inputs:", inputs, "dim:", dim)
     if not isinstance(inputs, (list, tuple)):
       raise TypeError(f"Expected list or tuple, got {type(inputs).__name__}")
     if not all(isinstance(t, TensorBase) for t in inputs):
@@ -185,11 +185,18 @@ class TensorBase:
     return self._impl.shape
       
   def reshape(self, new_shape):
-    print("Base Reshape called with new shape:", new_shape)
+    # print("Base Reshape called with new shape:", new_shape)
     reshaped_impl = self._impl.reshape(new_shape)
     return self.__class__(reshaped_impl)
 
   def __getitem__(self, idx):
+    if isinstance(idx, TensorBase):
+        # only support 1D Tensor (designed for embedding)
+        if len(idx.shape) != 1:
+            raise NotImplementedError("Only 1D Tensor indexing is supported in __getitem__")
+        index_list = idx.tolist()
+        row_tensors = [self[int(i)] for i in index_list]
+        return Tensor.stack(row_tensors, dim=0)
     item = self._impl[idx]
     if isinstance(item, cp.TensorBaseImpl):
       return self.__class__(item)
@@ -359,7 +366,7 @@ class TensorBase:
     Part5
   """
   def max(self, dim=None, keepdims=False):
-    print("max called with dim=", dim, "keepdims=", keepdims)
+    # print("max called with dim=", dim, "keepdims=", keepdims)
     if isinstance(dim, int):
       pass
     elif isinstance(dim, (list, tuple)):
@@ -435,7 +442,7 @@ class TensorBase:
     return [self.__class__(impl) for impl in chunked_impls]
   
   def split(self, split: Union[int, List[int]], dim: int = 0):
-    print("split called with split=", split, "dim=", dim)
+    # print("split called with split=", split, "dim=", dim)
     if not isinstance(dim, int):
       raise TypeError(f"Expected int for dim, got {type(dim).__name__}")
     split_impls = cp.split(self._impl, split, dim)
@@ -641,7 +648,7 @@ class Tensor(TensorBase):
   @tensor_op('__mul__', 'Mul')
   @scalar_to_tensor
   def __mul__(self, other, FunctionClass=None)->"Tensor":
-    print("Tensor __mul__ called with other:", other)
+    # print("Tensor __mul__ called with other:", other)
     return FunctionClass().apply(self, other)
     
   @tensor_op('__rmul__', 'Mul')

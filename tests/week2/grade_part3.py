@@ -184,6 +184,17 @@ def div2(impl = torch):
   
   return b.grad, c, d.grad, f, i.grad, j, k.grad, m
 
+@testcase(name="extra", score=10)
+def extra(impl = torch):
+  a = impl.ones((2, 3)) * 6
+  a.requires_grad_()
+  b = impl.ones((2, 3)) * 2
+  b.requires_grad_()
+  x = a - b
+  y = x * x
+  y.backward(impl.ones_like(y))
+  
+  return a.grad, b.grad, x, y
 
 def testsets_part3():
   print_separate_line()  
@@ -196,6 +207,7 @@ def testsets_part3():
   mul2()
   div1()
   div2()
+  extra()
   
 if __name__ == "__main__":
   testsets_part3()

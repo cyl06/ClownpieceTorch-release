@@ -157,12 +157,15 @@ class GraphTask():
                     queue.append(edge.node)
         
         self.dependencies = {node : 0 for node in self.nodes}
+        max_inputs = {node : -1 for node in self.nodes}
+        
         for node in self.nodes:
             for edge in node.next_edges:
                 if edge is not None and edge.node is not None:
                     self.dependencies[edge.node] += 1
+                    max_inputs[edge.node] = max(max_inputs[edge.node], edge.input_nr)
         
-        self.inputs_buffer = {node : [None] * self.dependencies[node] for node in self.nodes}
+        self.inputs_buffer = {node : [None] * (max_inputs[node] + 1) for node in self.nodes}
         
         
     # execute
