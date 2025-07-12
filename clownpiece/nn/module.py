@@ -243,13 +243,15 @@ class Module(object):
     child_lines = []
     for name, module in self._modules.items():
       mod_str = repr(module)
-      mod_str = "  " + mod_str.replace("\n", "\n  ")
+      mod_str = mod_str.replace("\n", "\n  ")
       child_lines.append(f"  ({name}): {mod_str}")
 
     if not child_lines:
+      if not extra:
+        main_str += "()"
       return main_str
     
-    return main_str + "\n" + "\n".join(child_lines) + "\n)"
+    return main_str + "(\n" + "\n".join(child_lines) + "\n)"
 
   def extra_repr(self) -> str:
     return ""

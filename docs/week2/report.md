@@ -16,7 +16,7 @@ It can only pass randomly now and has not been fixed yet. :( :$ :@
 
 > **Why we cannot use `while queue is not empty` as exit condition directly in multithreading case?**
 
-如果某个线程检查到队列非空，但在它真正取出数据前，另一个线程将元素取走导致队列为空，导致它尝试 `pop()` 空队列，从而抛出异常或进入死循环，即这个条件无法在多个线程之间保持一致，而应该采用带锁的同步机制。
+如果某个线程检查到队列非空，而直接退出，这会导致可用的线程数减少。如果一个图计算过程遇到一个瓶颈，此时就只会保留一个线程，从而导致后续的传播也只能使用单线程。因此要暂时保留未用上的线程。
 
 > **Why multithreading in backward execution matters, even if there is operator level multithreading?**
 
