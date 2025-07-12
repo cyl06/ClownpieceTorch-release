@@ -1,7 +1,5 @@
 # Report of Clownpiece-torch Week 3
 
----
-
 ## 通过记录
 
 ### 1. Output of `__repr` test in `grade_part1.py`
@@ -11,8 +9,6 @@
 ### 2. The grader summary part from output of `grade_all.py`
 
 ![alt text](image.png)
-
----
 
 ## 经验与教训
 
@@ -27,8 +23,6 @@
 7. 接上条，能够正常运行后，我发现模型准确率维持在奇低的水平且无法进步，猜测是损失函数写错了。经检查，`CrossEntropyLoss` 中 `forward` 的实现方法丢失了梯度，经过~~亡羊补牢~~修正之后，模型准确率开始大幅攀升，最终基本达到了目标。此外，同 5. 提到的增加初始学习率的方式，模型初期上升速率提高，经测试 0.08 是一个较为合适的值，既保证了初期的速度，又保证了后期的稳定。
 
 总的来说，经历了 week3 的锤炼与洗礼，我算是知道了如何搭建一个小型的模块系统，用于深度学习，也算是对 Python 更加熟悉了。这周的挫折主要还是告诉我要沉下心去看报错信息，不能太急于求成了。
-
----
 
 ## Optional Challange: Add Support for Conv2d
 
