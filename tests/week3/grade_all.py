@@ -66,6 +66,7 @@ def main():
         ("PART 2: Simplest Concrete Modules", "grade_part2.py"),
         ("PART 3: Initialization Functions", "grade_part3.py"),
         ("PART 4: Concrete Modules", "grade_part4.py"),
+        ("PART 5: Conv2D", "grade_part5.py")
     ]
     
     results = {}

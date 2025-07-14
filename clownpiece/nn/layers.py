@@ -1,6 +1,6 @@
 # Linear, Embedding, LayerNorm, BatchNorm, MultiheadAttention
 
-from typing import Optional
+from typing import Optional, List, Union
 from clownpiece.tensor import Tensor
 from clownpiece.nn.module import Module, Parameter, Buffer
 from . import init
@@ -163,3 +163,47 @@ class MultiheadAttention(Module):
   
   def extra_repr(self):
     return f"hidden_dim={self.hidden_dim}, num_heads={self.num_heads}, bias={self.bias}"
+
+class Conv2D(Module):
+  def __init__(self, in_channels: int, out_channels: int, kernel_size: Union[int, List[int]], bias: bool = True):
+    super().__init__()
+    self.in_channels = in_channels
+    self.out_channels = out_channels
+    self.kernel_size = kernel_size if isinstance(kernel_size, (list, tuple)) else (kernel_size, kernel_size)
+    
+    self.weight = Parameter(Tensor.empty((out_channels, in_channels, *self.kernel_size)))
+    
+    if bias:
+      self.bias = Parameter(Tensor.empty((out_channels,)))
+    else:
+      self.register_parameter('bias', None)
+    
+    self.reset_parameters()
+
+  def reset_parameters(self) -> None:
+    fan_in = self.in_channels * self.kernel_size[0] * self.kernel_size[1]
+    gain = init.calcuate_gain("relu")
+    b = gain * math.sqrt(3.0 / fan_in)
+    init.uniform_(self.weight, -b, b)
+    if self.bias:
+      init.uniform_(self.bias, -b, b)
+
+  def forward(self, x: Tensor) -> Tensor:
+    unfolded = x.unfold(self.kernel_size).transpose(1, 2)
+    kernel_weight = self.weight.view([self.out_channels, -1]).transpose()
+    
+    output = (unfolded @ kernel_weight).transpose(1, 2)
+    
+    batch_size, _, height, width = x.shape
+    out_height = height - self.kernel_size[0] + 1
+    out_width = width - self.kernel_size[1] + 1
+    
+    output = output.reshape([batch_size, self.out_channels, out_height, out_width])
+    
+    if self.bias:
+      output += self.bias.view([1, -1, 1, 1])
+    
+    return output
+
+  def extra_repr(self):
+    return f"in_channels={self.in_channels}, out_channels={self.out_channels}, kernel_size={self.kernel_size}, bias={True if self.bias else False}"
