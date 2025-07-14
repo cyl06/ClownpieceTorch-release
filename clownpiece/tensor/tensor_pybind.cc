@@ -606,13 +606,13 @@ PYBIND11_MODULE(tensor_impl, m) {
     }, py::arg("start"), py::arg("end"), py::arg("num_steps"), RELEASE_GIL, "Create a tensor with linearly spaced values from start to end with a specified number of steps");
     
     /* week 3 optional challenge - Conv2D */
-    m.def("unfold", [](const at::Tensor &tensor, const at::veci &kernel_size, int dilation = 1, int padding = 0, int stride = 1) {
-        return at::unfold(tensor, kernel_size, dilation, padding, stride);
-    }, py::arg("tensor"), py::arg("kernel_size"), py::arg("dilation") = 1, py::arg("padding") = 0, py::arg("stride") = 1, RELEASE_GIL, "Unfold the tensor according to the given kernel size.");
+    m.def("unfold", [](const at::Tensor &self, const at::veci &kernel_size, int dilation = 1, int padding = 0, int stride = 1) {
+        return self.unfold(kernel_size, dilation, padding, stride);
+    }, py::arg("t"), py::arg("kernel_size"), py::arg("dilation") = 1, py::arg("padding") = 0, py::arg("stride") = 1, RELEASE_GIL, "Unfold the tensor according to the given kernel size.");
     
-     m.def("fold", [](const at::Tensor &tensor, const at::veci &output_size, const at::veci &kernel_size, int dilation = 1, int padding = 0, int stride = 1) {
-        return at::fold(tensor, output_size, kernel_size, dilation, padding, stride);
-    }, py::arg("tensor"), py::arg("output_size"), py::arg("kernel_size"), py::arg("dilation") = 1, py::arg("padding") = 0, py::arg("stride") = 1, RELEASE_GIL, "Fold the tensor to the given output size with the given kernel size.");
+     m.def("fold", [](const at::Tensor &self, const at::veci &output_size, const at::veci &kernel_size, int dilation = 1, int padding = 0, int stride = 1) {
+        return self.fold(output_size, kernel_size, dilation, padding, stride);
+    }, py::arg("t"), py::arg("output_size"), py::arg("kernel_size"), py::arg("dilation") = 1, py::arg("padding") = 0, py::arg("stride") = 1, RELEASE_GIL, "Fold the tensor to the given output size with the given kernel size.");
 }
 
 /* Utils */

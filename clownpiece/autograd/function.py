@@ -654,3 +654,14 @@ class Broadcast(Function):
         for i, input_shape in enumerate(ctx.input_shapes):
             grad_inputs.append(reduce_broadcast(grad_outputs[i], input_shape, grad_outputs[i].shape))
         return tuple(grad_inputs)
+
+class Unfold(Function):
+    @staticmethod
+    def forward(ctx: Context, input: Tensor, kernel_size):
+        ctx.input_shape = input.shape
+        ctx.kernel_size = kernel_size
+        return input.unfold(kernel_size)
+
+    @staticmethod
+    def backward(ctx: Context, grad_output: Tensor):
+        return grad_output.fold(ctx.input_shape, ctx.kernel_size), None

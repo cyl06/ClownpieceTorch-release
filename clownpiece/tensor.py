@@ -460,6 +460,18 @@ class TensorBase:
     var_impl = self._impl.var(dim, keepdims, unbiased)
     return self.__class__(var_impl)
   
+  def unfold(self, kernel_size: Union[int, List[int]]):
+    if isinstance(kernel_size, int):
+      kernel_size = [kernel_size, kernel_size]
+    unfolded_impl = self._impl.unfold(kernel_size)
+    return self.__class__(unfolded_impl)
+
+  def fold(self, output_shape: List[int], kernel_size: Union[int, List[int]]):
+    if isinstance(kernel_size, int):
+      kernel_size = [kernel_size, kernel_size]
+    output_size = [output_shape[2], output_shape[3]]
+    folded_impl = self._impl.fold(output_size, kernel_size)
+    return self.__class__(folded_impl)
 
 """
   Utils for Binding
@@ -767,6 +779,14 @@ class Tensor(TensorBase):
   @tensor_op('broadcast', 'Broadcast')
   def broadcast(inputs: List["Tensor"], FunctionClass=None) -> "Tensor":
       return FunctionClass().apply(*inputs)
+  
+  """
+  Optional Challenge
+  """
+  
+  @tensor_op('unfold', 'Unfold')
+  def unfold(self, kernel_size: Union[int, List[int]], FunctionClass=None) -> "Tensor":
+      return FunctionClass().apply(self, kernel_size)
       
   """
   STR
