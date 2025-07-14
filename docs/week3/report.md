@@ -10,6 +10,10 @@
 
 ![alt text](image.png)
 
+And after adding an extra test for `Conv2D`...
+
+![alt text](image-3.png)
+
 ## 经验与教训
 
 这周做的比较狼吞虎咽，心急于完成 basic 后去做选做而导致了一堆弱智错误。
@@ -26,4 +30,55 @@
 
 ## Optional Challange: Add Support for Conv2d
 
-To be completed...
+> **How do you implement `Conv2d`?**
+
+我首先在 `clownpiece/tensor/tensor.cc` 里用 C++ 实现了 `unfold` 和 `fold`，然后在 `clownpiece/tensor/tensor_pybind.cc` 中将其在 Python 中绑定。完成这些操作之后，我自己编写了测试点 `tests/week1/grade_part9.py`，并与 torch 对比并调试至了通过。
+
+然后我在 `clownpiece/autograd/function.py` 里实现了 `Unfold` 类的前向和反向传播（反向传播使用 `fold`），并在 `clownpiece/tensor.py` 中补充了相应操作。完成之后，我自己编写了测试点 `tests/week2/grade_part7.py`，并与 torch 对比并调试至了通过。
+
+最后我在 `clownpiece/nn/layers.py` 中添加了 `Conv2D` 模块，用 AI 生成了测试点 `tests/week3/grade_part5.py` 并获得通过。
+
+核心思想为：用 `unfold` 将输入张量的每一个卷积窗口展平，然后把卷积核相应做调整，运用矩阵乘法来做卷积，最后再重塑成输出形状。
+
+核心代码如下：
+
+```python
+def forward(self, x: Tensor) -> Tensor:
+    unfolded = x.unfold(self.kernel_size) # (N, C_in * kh * kw, L)
+    kernel_weight = self.weight.reshape([self.out_channels, -1]) # (C_out, C_in * kh * kw)
+    
+    output = kernel_weight @ unfolded # (N, C_out, L)
+    
+    batch_size, _, height, width = x.shape
+    out_height = height - self.kernel_size[0] + 1
+    out_width = width - self.kernel_size[1] + 1
+    
+    output = output.reshape([batch_size, self.out_channels, out_height, out_width]) # (N, C_out, H_out, W_out)
+    
+    if self.bias:
+      output += self.bias.view([1, -1, 1, 1])
+    
+    return output
+```
+
+> **- What's the exact semantic of `unfold` and it's backward? How can it be utilized in `Conv2d`?**
+
+<blockquote style="background-color:Yellow; color:Red;">
+  Warning: 执笔至此，笔者才发现一个灾难性的错误：要求实现的是 padding='same'，可我始终将其简化为 padding=0 看待。因此上述代码仍需添加新功能，而这次 report 也仅作阶段性的汇报，后续仍会进行补充。
+</blockquote>
+
+`unfold` 操作的核心思想是从输入张量中提取出所有可能的、指定大小的滑动窗口（patches），并将这些窗口展平成一维向量，然后将所有展平后的窗口堆叠起来形成一个新的张量。
+
+以一个 2D 张量为例，`unfold` 会沿着高度和宽度维度滑动一个窗口。对于每个窗口位置，窗口内的数据会被展平。最终，这些展平后的窗口向量会组成一个新的 2D 张量，其中一行代表一个展平后的窗口。
+
+`unfold` 的反向操作通常被称为 `fold`，它的作用是将 `unfold` 产生的展平后的窗口重新组合成原始形状或根据卷积操作的输出形状，它的输入通常是形状为 $(N, C_{in} \times k_H \times k_W, L)$ 的张量，输出是形状为 $(N, C_{out}, H_{out}, W_{out})$ 的张量，其中 $C_{out}$ 是期望的输出通道数，$H_{out}$ 和 $W_{out}$ 是期望的输出高度和宽度。
+
+`Conv2d` 操作可以通过以下步骤利用 `unfold` 来实现：
+
+1.  用 `unfold` 将输入张量展开成形状为 $(N, C_{in} \times k_H \times k_W, L)$ 的矩阵。矩阵储存着所有窗口对应的展平后的局部感受野。
+2.  将 `Conv2d` 层的卷积核（权重）重塑成一个 $2D$ 矩阵。如果卷积核的形状是 $(C_{out}, C_{in}, k_H, k_W)$，它会被重塑为 $(C_{out}, C_{in} \times k_H \times k_W)$。
+3.  对 `unfold` 的输出张量与重塑后的卷积核进行矩阵乘法，即这相当于将每个展平的感受野与所有输出通道的卷积核进行点积操作。
+    例如，如果 `unfold` 的输出是 `unfolded_input`，卷积核是 `weights_reshaped`，那么计算可以表示为：`output_matrix = weights_reshaped @ unfolded_input`，形状是 $(N, C_{out}, L)$。
+4.  将最后一维重塑成两维。如果 `Conv2d` 层有偏置项，则将其添加到最终的输出张量中。
+
+查阅资料后得知，如此实现是因为矩阵乘法是高度优化的操作，许多深度学习框架都依赖于底层的 BLAS (Basic Linear Algebra Subprograms) 库（如 cuBLAS for NVIDIA GPUs, MKL for Intel CPUs）来实现高效的并行计算。通过将卷积操作转化为矩阵乘法，可以充分利用这些优化。

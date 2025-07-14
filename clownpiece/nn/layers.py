@@ -189,16 +189,16 @@ class Conv2D(Module):
       init.uniform_(self.bias, -b, b)
 
   def forward(self, x: Tensor) -> Tensor:
-    unfolded = x.unfold(self.kernel_size).transpose(1, 2)
-    kernel_weight = self.weight.view([self.out_channels, -1]).transpose()
+    unfolded = x.unfold(self.kernel_size) # (N, C_in * kh * kw, L)
+    kernel_weight = self.weight.reshape([self.out_channels, -1]) # (C_out, C_in * kh * kw)
     
-    output = (unfolded @ kernel_weight).transpose(1, 2)
+    output = kernel_weight @ unfolded # (N, C_out, L)
     
     batch_size, _, height, width = x.shape
     out_height = height - self.kernel_size[0] + 1
     out_width = width - self.kernel_size[1] + 1
     
-    output = output.reshape([batch_size, self.out_channels, out_height, out_width])
+    output = output.reshape([batch_size, self.out_channels, out_height, out_width]) # (N, C_out, H_out, W_out)
     
     if self.bias:
       output += self.bias.view([1, -1, 1, 1])
