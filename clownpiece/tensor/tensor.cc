@@ -1144,4 +1144,80 @@ namespace at {
     }
     return ans;
   }
+  
+  /*
+    Week3 Optional Challenges - Conv2D
+  */
+  
+  Tensor Tensor::unfold(const veci& kernel_size, int dilation, int padding, int stride) const {
+    if (dilation != 1 || padding != 0 || stride != 1) {
+      throw std::runtime_error("Not implemented yet. Only support (dilation=1, padding=0, stride=1) (Func: Tensor::unfold)");
+    }
+    
+    auto [batch_size, in_channels, height, width] = std::tie(shape_[0], shape_[1], shape_[2], shape_[3]);
+    auto [kernel_height, kernel_width] = std::tie(kernel_size[0], kernel_size[1]);
+
+    int out_height = height - kernel_height + 1;
+    int out_width = width - kernel_width + 1;
+    
+    Tensor output({batch_size * in_channels, kernel_height, kernel_width, out_height, out_width});
+    Tensor input = this->reshape({-1, height, width});
+
+    for (int bc = 0; bc < input.shape_[0]; bc++) {
+      for (int h = 0; h < out_height; h++) {
+        for (int w = 0; w < out_width; w++) {
+          for (int kh = 0; kh < kernel_height; kh++) {
+            for (int kw = 0; kw < kernel_width; kw++) {
+              output[{bc, kh, kw, h, w}] = input[bc][h + kh].data_at(w + kw);
+            }
+          }
+        }
+      }
+    }
+
+    return output.reshape({batch_size, in_channels * kernel_height * kernel_width, out_height * out_width});
+  }
+  
+  Tensor unfold(const Tensor& tensor, const veci& kernel_size, int dilation, int padding, int stride) {
+    return tensor.unfold(kernel_size, dilation, padding, stride);
+  }
+  
+  Tensor Tensor::fold(const veci& output_size, const veci& kernel_size, int dilation, int padding, int stride) const {
+    if (dilation != 1 || padding != 0 || stride != 1) {
+      throw std::runtime_error("Not implemented yet. Only support (dilation=1, padding=0, stride=1) (Func: Tensor::fold)");
+    }
+
+    auto [height, width] = std::tie(output_size[0], output_size[1]);
+    auto [kernel_height, kernel_width] = std::tie(kernel_size[0], kernel_size[1]);
+    
+    int batch_size = shape_[0];
+    if (shape_[1] % (kernel_height * kernel_width) != 0) {
+      throw std::runtime_error("kernel_size not match (Func: Tensor::fold)");
+    }
+    int in_channels = shape_[1] / (kernel_height * kernel_width);
+
+    int out_height = height - kernel_height + 1;
+    int out_width = width - kernel_width + 1;
+
+    Tensor output = zeros({batch_size * in_channels, height, width});
+    Tensor input = this->reshape({-1, kernel_height, kernel_width, out_height, out_width});
+    
+    for (int bc = 0; bc < input.shape_[0]; bc++) {
+      for (int h = 0; h < out_height; h++) {
+        for (int w = 0; w < out_width; w++) {
+          for (int kh = 0; kh < kernel_height; kh++) {
+            for (int kw = 0; kw < kernel_width; kw++) {
+              output[bc][h + kh].data_at(w + kw) += input[{bc, kh, kw, h, w}].item();
+            }
+          }
+        }
+      }
+    }
+
+    return output.reshape({batch_size, in_channels, height, width});
+  }
+  
+  Tensor fold(const Tensor& tensor, const veci& output_size, const veci& kernel_size, int dilation, int padding, int stride) {
+    return tensor.fold(output_size, kernel_size, dilation, padding, stride);
+  }
 };

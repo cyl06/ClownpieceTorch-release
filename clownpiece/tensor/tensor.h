@@ -249,6 +249,12 @@ class Tensor {
   */
   Tensor mean(int dim, bool keepdims=false) const;
   Tensor var(int dim, bool keepdims=false, bool unbiased=true) const;
+  
+  /*
+    Week3 Optional Challenges - Conv2D
+  */
+  Tensor unfold(const veci& kernel_size, int dilation=1, int padding=0, int stride=1) const;
+  Tensor fold(const veci& output_size, const veci& kernel_size, int dilation=1, int padding=0, int stride=1) const;
 };
 
 
@@ -308,6 +314,10 @@ Tensor linspace(dtype start, dtype end, int num_steps);
 */
 
 Tensor matmul(const Tensor& lhs, const Tensor& rhs);
+
+Tensor unfold(const Tensor& tensor, const veci& kernel_size, int dilation=1, int padding=0, int stride=1);
+
+Tensor fold(const Tensor& tensor, const veci& output_size, const veci& kernel_size, int dilation=1, int padding=0, int stride=1);
 
 };
 #endif

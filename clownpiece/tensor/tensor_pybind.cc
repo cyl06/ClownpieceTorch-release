@@ -422,6 +422,12 @@ PYBIND11_MODULE(tensor_impl, m) {
 
         .def("mean", &at::Tensor::mean, py::arg("dim"), py::arg("keepdims") = false, RELEASE_GIL, "Calculate the mean along a dimension")
         .def("var", &at::Tensor::var, py::arg("dim"), py::arg("keepdims") = false, py::arg("unbiased") = true, RELEASE_GIL, "Calculate the variance along a dimension")
+        
+        /* week 3 optional challenge - Conv2D */
+        .def("unfold", &at::Tensor::unfold, py::arg("kernel_size"), py::arg("dilation") = 1, py::arg("padding") = 0, py::arg("stride") = 1, RELEASE_GIL, "Unfold the tensor according to the given kernel size.")
+        
+        .def("fold", &at::Tensor::fold, py::arg("output_size"), py::arg("kernel_size"), py::arg("dilation") = 1, py::arg("padding") = 0, py::arg("stride") = 1, RELEASE_GIL, "Fold the tensor to the given output size with the given kernel size.")
+        
         ;
 
     /*** Part II: utils, clone, make contiguous and copy_ ***/
@@ -598,6 +604,15 @@ PYBIND11_MODULE(tensor_impl, m) {
     m.def("linspace", [](at::dtype start, at::dtype end, int num_steps) {
         return at::linspace(start, end, num_steps);
     }, py::arg("start"), py::arg("end"), py::arg("num_steps"), RELEASE_GIL, "Create a tensor with linearly spaced values from start to end with a specified number of steps");
+    
+    /* week 3 optional challenge - Conv2D */
+    m.def("unfold", [](const at::Tensor &tensor, const at::veci &kernel_size, int dilation = 1, int padding = 0, int stride = 1) {
+        return at::unfold(tensor, kernel_size, dilation, padding, stride);
+    }, py::arg("tensor"), py::arg("kernel_size"), py::arg("dilation") = 1, py::arg("padding") = 0, py::arg("stride") = 1, RELEASE_GIL, "Unfold the tensor according to the given kernel size.");
+    
+     m.def("fold", [](const at::Tensor &tensor, const at::veci &output_size, const at::veci &kernel_size, int dilation = 1, int padding = 0, int stride = 1) {
+        return at::fold(tensor, output_size, kernel_size, dilation, padding, stride);
+    }, py::arg("tensor"), py::arg("output_size"), py::arg("kernel_size"), py::arg("dilation") = 1, py::arg("padding") = 0, py::arg("stride") = 1, RELEASE_GIL, "Fold the tensor to the given output size with the given kernel size.");
 }
 
 /* Utils */

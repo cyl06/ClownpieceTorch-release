@@ -8,6 +8,7 @@ from grade_part5 import testsets_part5
 from grade_part6 import testsets_part6
 from grade_part7 import testsets_part7
 from grade_part8 import testsets_part8
+from grade_part9 import testsets_part9
 
 def testsets_all():
   testsets_part1()
@@ -18,6 +19,7 @@ def testsets_all():
   testsets_part6()
   testsets_part7()
   testsets_part8()
+  testsets_part9()
   
 if __name__ == "__main__":
   testsets_all()
