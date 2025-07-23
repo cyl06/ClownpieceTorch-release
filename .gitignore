@@ -200,3 +200,7 @@ test.py
 tests/**/data/
 tests/week3/minist/data/
 tests/week4/fashion-minist/data/
+
+# ensure my github is clean
+clownpiece/tensor/pic/
+clownpiece/tensor/*.md

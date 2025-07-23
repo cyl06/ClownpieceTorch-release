@@ -613,6 +613,18 @@ PYBIND11_MODULE(tensor_impl, m) {
      m.def("fold", [](const at::Tensor &self, const at::veci &output_size, const at::veci &kernel_size, int dilation = 1, int padding = 0, int stride = 1) {
         return self.fold(output_size, kernel_size, dilation, padding, stride);
     }, py::arg("t"), py::arg("output_size"), py::arg("kernel_size"), py::arg("dilation") = 1, py::arg("padding") = 0, py::arg("stride") = 1, RELEASE_GIL, "Fold the tensor to the given output size with the given kernel size.");
+    
+    m.def("parallel_strategy", []() {
+    #if defined(USE_THREAD_PER_OP)
+        return "ThreadPerOp";
+    #elif defined(USE_OPENMP)
+        return "OpenMP";
+    #elif defined(USE_THREAD_POOL)
+        return "ThreadPool";
+    #else
+        return "Sequential";
+    #endif
+    });
 }
 
 /* Utils */

@@ -1,3 +1,16 @@
+#include <thread>
+#include <vector>
+
+#if defined(USE_THREAD_POOL)
+#include "BS_thread_pool.hpp" 
+// 在文件作用域内实例化一个全局线程池
+static BS::thread_pool pool(std::thread::hardware_concurrency());
+#endif
+
+#if defined(USE_OPENMP)
+#include <omp.h>
+#endif
+
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 namespace py = pybind11;
@@ -392,18 +405,120 @@ namespace at {
   // General functions
   Tensor apply_unary_op(const Tensor& tes, std::function<dtype(dtype)> op) {
     vec<dtype> data(tes.numel());
-    for (int i = 0; i < tes.numel(); i++) {
-      data[i] = op(tes.data_at(i));
+    
+    int num_elements = tes.numel();
+
+  #if defined(USE_THREAD_PER_OP)
+    unsigned int num_threads = std::thread::hardware_concurrency();
+    std::vector<std::thread> threads;
+    int chunk_size = (num_elements + num_threads - 1) / num_threads;
+
+    for (unsigned int t = 0; t < num_threads; ++t) {
+        int start = t * chunk_size;
+        int end = std::min(start + chunk_size, num_elements);
+        if (start < end) {
+            threads.emplace_back([&, start, end]() {
+                for (int i = start; i < end; i++) {
+                    data[i] = op(tes.data_at(i));
+                }
+            });
+        }
     }
+    for (auto& thread : threads) {
+        thread.join();
+    }
+
+  #elif defined(USE_OPENMP)
+    #pragma omp parallel for
+    for (int i = 0; i < num_elements; i++) {
+        data[i] = op(tes.data_at(i));
+    }
+
+  #elif defined(USE_THREAD_POOL)
+    unsigned int num_threads = pool.get_thread_count();
+    int chunk_size = (num_elements + num_threads - 1) / num_threads;
+
+    for (unsigned int t = 0; t < num_threads; ++t) {
+        int start = t * chunk_size;
+        int end = std::min(start + chunk_size, num_elements);
+        if (start < end) {
+            pool.detach_task([&, start, end]() {
+                for (int i = start; i < end; i++) {
+                    data[i] = op(tes.data_at(i));
+                }
+            });
+        }
+    }
+    pool.wait();
+  
+  #else
+    for (int i = 0; i < tes.numel(); i++) {
+        data[i] = op(tes.data_at(i));
+    }
+  #endif
+    
     return Tensor(tes.get_shape(), data);
   }
-  
+
   Tensor apply_binary_op(const Tensor& lhs, const Tensor& rhs, std::function<dtype(dtype, dtype)> op) {
     auto [LHS, RHS] = Tensor::broadcast(lhs, rhs);
     vec<dtype> data(LHS.numel());
-    for (int i = 0; i < LHS.numel(); i++) {
+    
+    int num_elements = LHS.numel();
+
+  #if defined(USE_THREAD_PER_OP)
+    // printf("USE_THREAD_PER_OP\n");
+    unsigned int num_threads = std::thread::hardware_concurrency();
+    std::vector<std::thread> threads;
+    int chunk_size = (num_elements + num_threads - 1) / num_threads;
+
+    for (unsigned int t = 0; t < num_threads; ++t) {
+      int start = t * chunk_size;
+      int end = std::min(start + chunk_size, num_elements);
+      if (start < end) {
+        threads.emplace_back([&, start, end]() {
+          for (int i = start; i < end; i++) {
+            data[i] = op(LHS.data_at(i), RHS.data_at(i));
+          }
+        });
+      }
+    }
+    for (auto& thread : threads) {
+      thread.join();
+    }
+
+  #elif defined(USE_OPENMP)
+    // printf("USE_OPENMP\n");
+    #pragma omp parallel for
+    for (int i = 0; i < num_elements; i++) {
       data[i] = op(LHS.data_at(i), RHS.data_at(i));
     }
+
+  #elif defined(USE_THREAD_POOL)
+    // printf("USE_THREAD_POOL\n");
+    unsigned int num_threads = pool.get_thread_count();
+    int chunk_size = (num_elements + num_threads - 1) / num_threads;
+
+    for (unsigned int t = 0; t < num_threads; ++t) {
+      int start = t * chunk_size;
+      int end = std::min(start + chunk_size, num_elements);
+      if (start < end) {
+        pool.detach_task([&, start, end]() {
+          for (int i = start; i < end; i++) {
+            data[i] = op(LHS.data_at(i), RHS.data_at(i));
+          }
+        });
+      }
+    }
+    pool.wait();
+    
+  #else
+    // printf("USE_DEFAULT\n");
+    for (int i = 0; i < num_elements; i++) {
+      data[i] = op(LHS.data_at(i), RHS.data_at(i));
+    }
+  #endif
+
     return Tensor(LHS.get_shape(), data);
   }
   
@@ -536,10 +651,36 @@ namespace at {
     Tensor rhs_tens = rhs.broadcast_to(rhs_brc).reshape({-1, l, m});
     
     Tensor mat_tens({lhs_tens.shape_[0], n, l});
-    // compute matrix multiplication
-    for (int s = 0; s < lhs_tens.shape_[0]; s++) {
+    
+    int num_batches = lhs_tens.shape_[0];
+
+  #if defined(USE_THREAD_PER_OP)
+    // printf("USE_THREAD_PER_OP\n");
+    std::vector<std::thread> threads;
+    threads.reserve(num_batches);
+    for (int s = 0; s < num_batches; s++) {
+      threads.emplace_back([s, n, l, m, &lhs_tens, &rhs_tens, &mat_tens]() {
+        Tensor LHS = lhs_tens[s], RHS = rhs_tens[s], MAT = mat_tens[s];
+        for (int i = 0; i < n; i++) {
+          for (int j = 0; j < l; j++) {
+            dtype sum = 0;
+            for (int k = 0; k < m; k++) {
+              sum += LHS.data_at(i * m + k) * RHS.data_at(j * m + k);
+            }
+            MAT.data_at(i * l + j) = sum;
+          }
+        }
+      });
+    }
+    for (auto& t : threads) {
+        t.join();
+    }
+
+  #elif defined(USE_OPENMP)
+    // printf("USE_OPENMP\n");
+    for (int s = 0; s < num_batches; s++) {
       Tensor LHS = lhs_tens[s], RHS = rhs_tens[s], MAT = mat_tens[s];
-      // std::cerr << "s = " << s << std::endl << LHS << std::endl << RHS << std::endl;
+      #pragma omp parallel for collapse(2)
       for (int i = 0; i < n; i++) {
         for (int j = 0; j < l; j++) {
           dtype sum = 0;
@@ -550,6 +691,49 @@ namespace at {
         }
       }
     }
+    
+  #elif defined(USE_THREAD_POOL)
+    // printf("USE_THREAD_POOL\n");
+    int chunk_size = 32;
+    for (int s = 0; s < num_batches; s++) {
+      Tensor LHS = lhs_tens[s];
+      Tensor RHS = rhs_tens[s];
+      Tensor MAT = mat_tens[s];
+
+      for (int i = 0; i < n; i += chunk_size) {
+        for (int j = 0; j < l; j += chunk_size) {
+          pool.detach_task([=, &LHS, &RHS, &MAT]() {
+            for (int ii = i; ii < std::min(i + chunk_size, n); ii++) {
+              for (int jj = j; jj < std::min(j + chunk_size, l); jj++) {
+                dtype sum = 0;
+                for (int k = 0; k < m; k++) {
+                  sum += LHS.data_at(ii * m + k) * RHS.data_at(jj * m + k);
+                }
+                MAT.data_at(ii * l + jj) = sum;
+              }
+            }
+          });
+        }
+      }
+    }
+    pool.wait();
+
+
+  #else
+    // printf("USE_DEFAULT\n");
+    for (int s = 0; s < num_batches; s++) {
+      Tensor LHS = lhs_tens[s], RHS = rhs_tens[s], MAT = mat_tens[s];
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < l; j++) {
+          dtype sum = 0;
+          for (int k = 0; k < m; k++) {
+            sum += LHS.data_at(i * m + k) * RHS.data_at(j * m + k);
+          }
+          MAT.data_at(i * l + j) = sum;
+        }
+      }
+    }
+  #endif
     
     mat_tens = mat_tens.reshape(brc_batch);
     if (dim1_lhs) {
